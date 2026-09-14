@@ -40,8 +40,12 @@ function Section({ title, items }: { title: string; items: SectionItem[] }) {
   return (
     <div>
       <div className="flex items-center justify-between mb-3">
-        <h2 className="text-base sm:text-lg font-bold text-gray-800">{title}</h2>
-        <span className="text-xs text-gray-500 font-medium">Total: {items.reduce((acc, curr) => acc + curr.count, 0)} Berkas</span>
+        <h2 className="text-base sm:text-lg font-bold text-gray-800">
+          {title}
+        </h2>
+        <span className="text-xs text-gray-500 font-medium">
+          Total: {items.reduce((acc, curr) => acc + curr.count, 0)} Berkas
+        </span>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
         {items.map((item) => (
@@ -52,16 +56,24 @@ function Section({ title, items }: { title: string; items: SectionItem[] }) {
           >
             <div className="flex items-center gap-2.5">
               <div className="w-8 h-8 rounded-lg bg-gray-50 group-hover:bg-[#F2F5E9] flex items-center justify-center transition-colors">
-                <FileText className="text-gray-400 group-hover:text-[#5A7A22]" size={16} />
+                <FileText
+                  className="text-gray-400 group-hover:text-[#5A7A22]"
+                  size={16}
+                />
               </div>
               <div>
                 <p className="font-bold text-gray-700 group-hover:text-[#5A7A22] text-sm leading-tight">
                   {item.label}
                 </p>
-                <p className="text-gray-400 text-xs mt-0.5">{item.count} Dokumen</p>
+                <p className="text-gray-400 text-xs mt-0.5">
+                  {item.count} Dokumen
+                </p>
               </div>
             </div>
-            <ChevronRight size={14} className="text-gray-300 group-hover:text-[#5A7A22] group-hover:translate-x-0.5 transition-all" />
+            <ChevronRight
+              size={14}
+              className="text-gray-300 group-hover:text-[#5A7A22] group-hover:translate-x-0.5 transition-all"
+            />
           </Link>
         ))}
       </div>
