@@ -59,7 +59,9 @@ function SignatureBox({
   return (
     <div
       className={`relative w-full h-[110px] border border-dashed flex items-center justify-center overflow-hidden transition-all ${
-        isEditing ? "border-[#7E9631]/50 bg-white" : "border-gray-200 bg-gray-50"
+        isEditing
+          ? "border-[#7E9631]/50 bg-white"
+          : "border-gray-200 bg-gray-50"
       }`}
     >
       {value ? (
@@ -143,7 +145,6 @@ function EditSaveControls({
 
 interface KukItem {
   id: string;
-  nomor: string;
   teks: string;
 }
 
@@ -217,7 +218,6 @@ const RAW_UNITS: { kodeUnit: string; judulUnit: string }[] = [
 function emptyKuk(unitIdx: number, elemenIdx: number, kukIdx: number): KukItem {
   return {
     id: `u${unitIdx}-e${elemenIdx}-k${kukIdx}`,
-    nomor: `${elemenIdx}.${kukIdx}`,
     teks: "",
   };
 }
@@ -251,12 +251,10 @@ function buildInitialUnits(): UnitKompetensiRow[] {
             kukList: [
               {
                 id: "u1-e1-k1",
-                nomor: "1.1",
                 teks: "Istilah, ungkapan, dan bahasa tubuh untuk memperjelas komunikasi secara lisan dilakukan",
               },
               {
                 id: "u1-e1-k2",
-                nomor: "1.2",
                 teks: "Mengerti dan Menggunakan kalimat yang sopan dan ramah serta mengetahui kapan harus memakai kalimat resmi atau tidak resmi",
               },
             ],
@@ -271,27 +269,22 @@ function buildInitialUnits(): UnitKompetensiRow[] {
             kukList: [
               {
                 id: "u1-e2-k1",
-                nomor: "2.1",
                 teks: "Salam diberikan dengan benar termasuk menyebutkan nama perusahaan",
               },
               {
                 id: "u1-e2-k2",
-                nomor: "2.2",
                 teks: "Bantuan dan menentukan tujuan telepon ditawarkan",
               },
               {
                 id: "u1-e2-k3",
-                nomor: "2.3",
                 teks: "Bantuan dan menentukan tujuan telepon ditawarkan",
               },
               {
                 id: "u1-e2-k4",
-                nomor: "2.4",
                 teks: "Apabila diperlukan, meminta maaf kepada penelepon ketika orang yang dikehendaki tidak berada di tempat",
               },
               {
                 id: "u1-e2-k5",
-                nomor: "2.5",
                 teks: "Data penelepon di catat",
               },
             ],
@@ -401,80 +394,6 @@ export default function Ia01Page() {
               ),
             };
           }),
-        };
-      }),
-    );
-  };
-
-  const addKuk = (unitId: string, elemenId: string) => {
-    setUnits((prev) =>
-      prev.map((u) => {
-        if (u.id !== unitId) return u;
-        return {
-          ...u,
-          elemens: u.elemens.map((e) => {
-            if (e.id !== elemenId) return e;
-            const nextIdx = e.kukList.length + 1;
-            return {
-              ...e,
-              kukList: [
-                ...e.kukList,
-                {
-                  id: `${elemenId}-k${Date.now()}`,
-                  nomor: `${e.no}.${nextIdx}`,
-                  teks: "",
-                },
-              ],
-            };
-          }),
-        };
-      }),
-    );
-  };
-
-  const removeKuk = (unitId: string, elemenId: string, kukId: string) => {
-    setUnits((prev) =>
-      prev.map((u) => {
-        if (u.id !== unitId) return u;
-        return {
-          ...u,
-          elemens: u.elemens.map((e) => {
-            if (e.id !== elemenId) return e;
-            if (e.kukList.length <= 1) return e;
-            return {
-              ...e,
-              kukList: e.kukList.filter((k) => k.id !== kukId),
-            };
-          }),
-        };
-      }),
-    );
-  };
-
-  const addElemen = (unitId: string) => {
-    setUnits((prev) =>
-      prev.map((u) => {
-        if (u.id !== unitId) return u;
-        const nextNo = u.elemens.length + 1;
-        return {
-          ...u,
-          elemens: [
-            ...u.elemens,
-            emptyElemen(u.no, nextNo),
-          ],
-        };
-      }),
-    );
-  };
-
-  const removeElemen = (unitId: string, elemenId: string) => {
-    setUnits((prev) =>
-      prev.map((u) => {
-        if (u.id !== unitId) return u;
-        if (u.elemens.length <= 1) return u;
-        return {
-          ...u,
-          elemens: u.elemens.filter((e) => e.id !== elemenId),
         };
       }),
     );
@@ -714,7 +633,7 @@ export default function Ia01Page() {
           <table className="w-full border-collapse text-sm table-fixed">
             <thead>
               <tr className="text-xs font-semibold text-gray-600">
-                <th className="w-40 px-3 py-2.5 border border-gray-200"></th>
+                <th className="w-52 px-3 py-2.5 border border-gray-200"></th>
                 <th className="w-14 px-3 py-2.5 border border-gray-200">No</th>
                 <th className="w-52 px-3 py-2.5 border border-gray-200 text-left">
                   Kode Unit
@@ -853,7 +772,10 @@ export default function Ia01Page() {
                   </th>
                 </tr>
                 <tr className="text-xs font-semibold text-gray-700">
-                  <th className="border border-gray-200 bg-gray-50" colSpan={4}></th>
+                  <th
+                    className="border border-gray-200 bg-gray-50"
+                    colSpan={4}
+                  ></th>
                   <th className="px-2 py-1.5 border border-gray-200 bg-gray-50">
                     Ya
                   </th>
@@ -888,49 +810,17 @@ export default function Ia01Page() {
                                   })
                                 }
                                 isEditing={isEditing}
-                                className="text-sm text-gray-700"
+                                className="text-sm text-gray-700 wrap-break-word"
                                 rows={4}
                               />
-                              {isEditing && (
-                                <div className="flex items-center gap-3 mt-2">
-                                  <button
-                                    type="button"
-                                    onClick={() => addKuk(unit.id, elemen.id)}
-                                    className="inline-flex items-center gap-1 text-xs font-semibold text-[#7E9631] hover:text-[#6C8229] cursor-pointer"
-                                  >
-                                    <Plus size={12} />
-                                    Tambah KUK
-                                  </button>
-                                  {unit.elemens.length > 1 && (
-                                    <button
-                                      type="button"
-                                      onClick={() =>
-                                        removeElemen(unit.id, elemen.id)
-                                      }
-                                      className="inline-flex items-center gap-1 text-xs font-semibold text-gray-400 hover:text-red-500 cursor-pointer"
-                                    >
-                                      <X size={12} />
-                                      Hapus Elemen
-                                    </button>
-                                  )}
-                                </div>
-                              )}
                             </td>
                           </>
                         )}
-                        <td className="px-3 py-2 border border-gray-200">
-                          <div className="flex items-start gap-2">
-                            <input
-                              type="text"
-                              value={kuk.nomor}
-                              onChange={(e) =>
-                                updateKuk(unit.id, elemen.id, kuk.id, {
-                                  nomor: e.target.value,
-                                })
-                              }
-                              disabled={!isEditing}
-                              className={`${compactInputClass} w-14 shrink-0 font-mono`}
-                            />
+                        <td className="px-3 py-2 border border-gray-200 overflow-hidden">
+                          <div className="flex items-start gap-2 min-w-0">
+                            <span className="w-9 shrink-0 pt-1 text-xs font-mono text-gray-500">
+                              {elemen.no}.{kIdx + 1}
+                            </span>
                             <div className="flex-1 min-w-0">
                               <EditableText
                                 value={kuk.teks}
@@ -940,21 +830,10 @@ export default function Ia01Page() {
                                   })
                                 }
                                 isEditing={isEditing}
-                                className="text-sm text-gray-700"
+                                className="text-sm text-gray-700 wrap-break-word"
                                 rows={2}
                               />
                             </div>
-                            {isEditing && elemen.kukList.length > 1 && (
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  removeKuk(unit.id, elemen.id, kuk.id)
-                                }
-                                className="text-gray-300 hover:text-red-500 shrink-0 cursor-pointer"
-                              >
-                                <X size={13} />
-                              </button>
-                            )}
                           </div>
                         </td>
                         {kIdx === 0 && (
@@ -986,9 +865,7 @@ export default function Ia01Page() {
                                 onChange={() =>
                                   updateElemen(unit.id, elemen.id, {
                                     pencapaian:
-                                      elemen.pencapaian === "ya"
-                                        ? null
-                                        : "ya",
+                                      elemen.pencapaian === "ya" ? null : "ya",
                                   })
                                 }
                                 className={`${checkboxClass} mx-auto`}
@@ -1035,20 +912,6 @@ export default function Ia01Page() {
                     ))}
                   </Fragment>
                 ))}
-                <tr>
-                  <td colSpan={7} className="px-3 py-3 border border-gray-200">
-                    {isEditing && (
-                      <button
-                        type="button"
-                        onClick={() => addElemen(unit.id)}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold text-white bg-[#7E9631] hover:bg-[#6C8229] transition-all cursor-pointer"
-                      >
-                        <Plus size={12} />
-                        Tambah Elemen
-                      </button>
-                    )}
-                  </td>
-                </tr>
               </tbody>
             </table>
           </div>
@@ -1092,8 +955,11 @@ export default function Ia01Page() {
                 }
                 className={`${checkboxClass} mt-0.5`}
               />
-              Asesi telah memenuhi pencapaian seluruh kriteria unjuk kerja,
-              direkomendasikan <span className="font-bold">KOMPETEN</span>
+              <span>
+                Asesi telah memenuhi pencapaian seluruh kriteria unjuk kerja,
+                direkomendasikan{" "}
+                <span className="font-bold">KOMPETEN</span>
+              </span>
             </label>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2">
@@ -1116,12 +982,14 @@ export default function Ia01Page() {
                   }
                   className={`${checkboxClass} mt-0.5`}
                 />
-                Asesi belum memenuhi pencapaian seluruh kriteria unjuk kerja,
-                direkomendasikan{" "}
-                <span className="font-bold">
-                  OBSERVASI LANGSUNG/ KEGIATAN TERSTRUKTUR*)
-                </span>{" "}
-                pada:
+                <span>
+                  Asesi belum memenuhi pencapaian seluruh kriteria unjuk
+                  kerja, direkomendasikan{" "}
+                  <span className="font-bold">
+                    OBSERVASI LANGSUNG/ KEGIATAN TERSTRUKTUR*)
+                  </span>{" "}
+                  pada:
+                </span>
               </label>
               <div className="pl-7 mt-3 space-y-2.5">
                 <div className="flex items-center gap-3">

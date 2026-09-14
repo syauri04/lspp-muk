@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Check, Pencil, Save, Smile, Meh, Frown } from "lucide-react";
+import { Check, Pencil, Save, Smile, Meh, Frown, Plus, X } from "lucide-react";
 
 const inputClass =
   "w-full px-3.5 py-2.5 text-sm text-gray-800 bg-white border border-gray-300 focus:border-[#7E9631] focus:outline-none focus:ring-2 focus:ring-[#7E9631]/20 transition-all disabled:bg-gray-50 disabled:text-gray-400";
@@ -38,6 +38,22 @@ interface UnitRow {
   no: number;
   kodeUnit: string;
   judulUnit: string;
+}
+
+interface KonfirmasiOrangRow {
+  id: string;
+  orang: string;
+  nama: string;
+  ttd: string | null;
+}
+
+interface PenyusunRow {
+  id: string;
+  status: "Penyusun" | "Validator";
+  no: number;
+  nama: string;
+  nomorMet: string;
+  ttd: string | null;
 }
 
 interface AssessmentRow {
@@ -160,6 +176,117 @@ function EmojiPicker({
         );
       })}
     </div>
+  );
+}
+
+function SignatureBox({
+  value,
+  onChange,
+  isEditing,
+  inputId,
+}: {
+  value: string | null;
+  onChange: (dataUrl: string | null) => void;
+  isEditing: boolean;
+  inputId: string;
+}) {
+  const handleFile = (file: File | undefined) => {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => onChange(reader.result as string);
+    reader.readAsDataURL(file);
+  };
+
+  return (
+    <div
+      className={`relative w-full h-[110px] border border-dashed flex items-center justify-center overflow-hidden transition-all ${
+        isEditing
+          ? "border-[#7E9631]/50 bg-white"
+          : "border-gray-200 bg-gray-50"
+      }`}
+    >
+      {value ? (
+        <>
+          <img
+            src={value}
+            alt="Tanda tangan"
+            className="max-h-full max-w-full object-contain"
+          />
+          {isEditing && (
+            <button
+              type="button"
+              onClick={() => onChange(null)}
+              className="absolute top-1.5 right-1.5 p-1 rounded-full bg-white border border-gray-200 text-gray-500 hover:text-red-500 hover:border-red-200 transition-colors cursor-pointer"
+            >
+              <X size={12} />
+            </button>
+          )}
+        </>
+      ) : isEditing ? (
+        <label
+          htmlFor={inputId}
+          className="flex flex-col items-center justify-center gap-1 text-gray-400 hover:text-[#7E9631] cursor-pointer w-full h-full"
+        >
+          <Plus size={22} className="stroke-[1.5]" />
+          <input
+            id={inputId}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => handleFile(e.target.files?.[0])}
+          />
+        </label>
+      ) : (
+        <Plus size={22} className="stroke-[1.5] text-gray-300" />
+      )}
+    </div>
+  );
+}
+
+function AdaTidakAdaToggle({
+  ada,
+  onChange,
+  isEditing,
+  suffix,
+}: {
+  ada: boolean | null;
+  onChange: (v: boolean) => void;
+  isEditing: boolean;
+  suffix: string;
+}) {
+  return (
+    <p className="text-sm text-gray-700">
+      <button
+        type="button"
+        disabled={!isEditing}
+        onClick={() => onChange(true)}
+        className={
+          ada === true
+            ? "font-bold text-gray-800"
+            : ada === false
+              ? "line-through text-gray-400"
+              : "text-gray-700"
+        }
+      >
+        Ada
+      </button>
+      /
+      <button
+        type="button"
+        disabled={!isEditing}
+        onClick={() => onChange(false)}
+        className={
+          ada === false
+            ? "font-bold text-gray-800"
+            : ada === true
+              ? "line-through text-gray-400"
+              : "text-gray-700"
+        }
+      >
+        tidak ada
+      </button>
+      <span className="text-gray-400">*</span> {suffix}
+    </p>
   );
 }
 
@@ -305,12 +432,12 @@ const initialKonfirmasi: CheckItem[] = [
 const initialStandarKompetensi: StandarItem[] = [
   {
     id: "standar-a",
-    marker: "a.",
+    marker: "1.",
     teks: "Keputusan Menteri Ketenagakerjaan Republik Indonesia Nomor 145 Tahun 2018 tentang Penetapan Standar Kompetensi Kerja Nasional Indonesia Kategori Penyediaan Akomodasi Dan Penyediaan Makan Minum Golongan Pokok Penyediaan Akomodasi Bidang Hotel dan Restoran.",
   },
   {
     id: "standar-1",
-    marker: "1.",
+    marker: "2.",
     teks: "Keputusan Menteri Ketenagakerjaan Republik Indonesia Nomor 123 Tahun 2024 tentang Penetapan Standar Kompetensi Kerja Nasional Indonesia Kategori Aktivitas Penyewaan dan Sewa Guna Usaha Tanpa Hak Opsi, Ketenagakerjaan, Agen Perjalanan dan Penunjang Usaha Lainnya Golongan Pokok Aktivitas Administrasi Kantor, Aktivitas Penunjang Kantor, Aktivitas Penunjang Usaha Lainnya Bidang Meeting, Incentive, Convention, and Exhibition (MICE).",
   },
 ];
@@ -460,6 +587,69 @@ function buildInitialAssessmentRows(): AssessmentRow[] {
   }));
 }
 
+const initialKonfirmasiOrang: KonfirmasiOrangRow[] = [
+  {
+    id: "konfirmasi-orang-1",
+    orang: "Manajer sertifikasi LSP",
+    nama: "Dr. Ricardo Indra, M.Si.",
+    ttd: null,
+  },
+  {
+    id: "konfirmasi-orang-2",
+    orang: "Master Asesor/Master Trainer/Lead Asesor Kompetensi",
+    nama: "",
+    ttd: null,
+  },
+  {
+    id: "konfirmasi-orang-3",
+    orang:
+      "Manajer pelatihan Lembaga Training terakreditasi/Lembaga Training terdaftar",
+    nama: "",
+    ttd: null,
+  },
+  {
+    id: "konfirmasi-orang-4",
+    orang: "Manajer atau supervisor ditempat kerja",
+    nama: "",
+    ttd: null,
+  },
+];
+
+const initialPenyusunValidator: PenyusunRow[] = [
+  {
+    id: "p1",
+    status: "Penyusun",
+    no: 1,
+    nama: "Munif Sofian, S. Kom.",
+    nomorMet: "000.006177 2025",
+    ttd: null,
+  },
+  {
+    id: "p2",
+    status: "Penyusun",
+    no: 2,
+    nama: "Muhammad Rijal Rabbani, S.E.",
+    nomorMet: "000.006175 2025",
+    ttd: null,
+  },
+  {
+    id: "v1",
+    status: "Validator",
+    no: 1,
+    nama: "Alma Fanniya Idral, M.Si.",
+    nomorMet: "000.009936 2023",
+    ttd: null,
+  },
+  {
+    id: "v2",
+    status: "Validator",
+    no: 2,
+    nama: "Yulia Setiasih, S.Tr.Par., M.M.",
+    nomorMet: "000.006180 2025",
+    ttd: null,
+  },
+];
+
 export default function APL02Page() {
   const [judulSkema, setJudulSkema] = useState(
     "MEETING/CONFERENCE PROJECT MANAGER",
@@ -501,6 +691,38 @@ export default function APL02Page() {
   const [units2, setUnits2] = useState<UnitRow[]>(buildInitialUnits);
   const [assessmentRows, setAssessmentRows] = useState<AssessmentRow[]>(
     buildInitialAssessmentRows,
+  );
+
+  // Section 3
+  const [karakteristikKandidat, setKarakteristikKandidat] = useState<{
+    ada: boolean | null;
+    catatan: string;
+  }>({ ada: null, catatan: "" });
+  const [kebutuhanKontekstualisasi, setKebutuhanKontekstualisasi] = useState<{
+    ada: boolean | null;
+    catatan: string;
+  }>({ ada: null, catatan: "" });
+  const [saranPelatihan, setSaranPelatihan] = useState<{
+    ada: boolean | null;
+    catatan: string;
+  }>({ ada: null, catatan: "" });
+  const [peluangTerintegrasi, setPeluangTerintegrasi] = useState<{
+    ada: boolean | null;
+    catatan: string;
+  }>({
+    ada: true,
+    catatan:
+      "Pada Skema Meeting/Conference Registration Staff, dengan Unit Kompetensi :\n1. Berkomunikasi Secara Lisan Dalam Bahasa Inggris pada Tingkat Operasional Dasar\n2. Melakukan Kerjasama dengan Kolega dan Pelanggan\n3. Melakukan Kerja dalam Lingkungan Sosial yang Beragam\n4. Mencari dan Memberikan Informasi\n5. Mengikuti Aturan Keprotokolan\n6. Menulis Dalam Bahasa Inggris pada Tingkat Penyeliaan dan Operasional Menengah\n7. Memproses dan Memantau Pendaftaran Kegiatan\n8. Mengatur Pendaftaran Tamu dalam Suatu Acara\n9. Mengelola Database",
+  });
+
+  // Konfirmasi dengan orang yang relevan
+  const [konfirmasiOrangRows, setKonfirmasiOrangRows] = useState<
+    KonfirmasiOrangRow[]
+  >(initialKonfirmasiOrang);
+
+  // Penyusun dan Validator
+  const [penyusunRows, setPenyusunRows] = useState<PenyusunRow[]>(
+    initialPenyusunValidator,
   );
 
   const handleUbah = () => setIsEditing(true);
@@ -557,6 +779,34 @@ export default function APL02Page() {
           ? { ...r, jenisBukti: { ...r.jenisBukti, [field]: value } }
           : r,
       ),
+    );
+  };
+
+  const updateKonfirmasiOrang = (id: string, nama: string) => {
+    setKonfirmasiOrangRows((prev) =>
+      prev.map((r) => (r.id === id ? { ...r, nama } : r)),
+    );
+  };
+
+  const updateKonfirmasiOrangTtd = (id: string, ttd: string | null) => {
+    setKonfirmasiOrangRows((prev) =>
+      prev.map((r) => (r.id === id ? { ...r, ttd } : r)),
+    );
+  };
+
+  const updatePenyusun = (
+    id: string,
+    field: "nama" | "nomorMet",
+    value: string,
+  ) => {
+    setPenyusunRows((prev) =>
+      prev.map((r) => (r.id === id ? { ...r, [field]: value } : r)),
+    );
+  };
+
+  const updatePenyusunTtd = (id: string, ttd: string | null) => {
+    setPenyusunRows((prev) =>
+      prev.map((r) => (r.id === id ? { ...r, ttd } : r)),
     );
   };
 
@@ -1358,6 +1608,302 @@ export default function APL02Page() {
               </tbody>
             </table>
           </div>
+        </div>
+
+        {/* ============================================================ */}
+        {/* SECTION 3 — Mengidentifikasi Persyaratan Modifikasi           */}
+        {/* ============================================================ */}
+        <div className="space-y-2">
+          <div className="border border-gray-200">
+            <table className="w-full border-collapse text-sm table-fixed">
+              <colgroup>
+                <col className="w-14" />
+                <col className="w-72" />
+                <col />
+              </colgroup>
+              <tbody>
+                <tr>
+                  <td
+                    colSpan={3}
+                    className="px-4 py-2.5 border border-gray-200 font-bold text-gray-800"
+                  >
+                    3. Mengidentifikasi Persyaratan Modifikasi dan
+                    Kontekstualisasi:
+                  </td>
+                </tr>
+
+                <tr>
+                  <td
+                    rowSpan={2}
+                    className="align-top px-4 py-3 border border-gray-200 font-semibold text-gray-700"
+                  >
+                    3.1
+                  </td>
+                  <td className="align-top px-4 py-3 border border-gray-200 text-gray-700">
+                    <span className="font-semibold">a.</span> Karakteristik
+                    Kandidat:
+                  </td>
+                  <td className="px-4 py-3 border border-gray-200">
+                    <AdaTidakAdaToggle
+                      ada={karakteristikKandidat.ada}
+                      onChange={(v) =>
+                        setKarakteristikKandidat((p) => ({ ...p, ada: v }))
+                      }
+                      isEditing={isEditing}
+                      suffix="karakteristik khusus kandidat"
+                    />
+                    <p className="text-sm text-gray-700 mt-1">
+                      Jika ada, tuliskan:
+                    </p>
+                    <EditableText
+                      value={karakteristikKandidat.catatan}
+                      onChange={(v) =>
+                        setKarakteristikKandidat((p) => ({
+                          ...p,
+                          catatan: v,
+                        }))
+                      }
+                      isEditing={isEditing}
+                      className="text-sm text-gray-700 mt-1"
+                      rows={2}
+                    />
+                  </td>
+                </tr>
+                <tr>
+                  <td className="align-top px-4 py-3 border border-gray-200 text-gray-700">
+                    <span className="font-semibold">b.</span> Kebutuhan
+                    kontekstualisasi terkait tempat kerja:
+                  </td>
+                  <td className="px-4 py-3 border border-gray-200">
+                    <AdaTidakAdaToggle
+                      ada={kebutuhanKontekstualisasi.ada}
+                      onChange={(v) =>
+                        setKebutuhanKontekstualisasi((p) => ({
+                          ...p,
+                          ada: v,
+                        }))
+                      }
+                      isEditing={isEditing}
+                      suffix="kebutuhan kontekstualisasi"
+                    />
+                    <p className="text-sm text-gray-700 mt-1">
+                      Jika ada, tuliskan:
+                    </p>
+                    <EditableText
+                      value={kebutuhanKontekstualisasi.catatan}
+                      onChange={(v) =>
+                        setKebutuhanKontekstualisasi((p) => ({
+                          ...p,
+                          catatan: v,
+                        }))
+                      }
+                      isEditing={isEditing}
+                      className="text-sm text-gray-700 mt-1"
+                      rows={2}
+                    />
+                  </td>
+                </tr>
+
+                <tr>
+                  <td className="align-top px-4 py-3 border border-gray-200 font-semibold text-gray-700">
+                    3.2
+                  </td>
+                  <td className="align-top px-4 py-3 border border-gray-200 text-gray-700">
+                    Saran yang diberikan oleh paket pelatihan atau pengembang
+                    pelatihan
+                  </td>
+                  <td className="px-4 py-3 border border-gray-200">
+                    <AdaTidakAdaToggle
+                      ada={saranPelatihan.ada}
+                      onChange={(v) =>
+                        setSaranPelatihan((p) => ({ ...p, ada: v }))
+                      }
+                      isEditing={isEditing}
+                      suffix="saran Jika ada, tuliskan:"
+                    />
+                    <EditableText
+                      value={saranPelatihan.catatan}
+                      onChange={(v) =>
+                        setSaranPelatihan((p) => ({ ...p, catatan: v }))
+                      }
+                      isEditing={isEditing}
+                      className="text-sm text-gray-700 mt-1"
+                      rows={2}
+                    />
+                  </td>
+                </tr>
+
+                <tr>
+                  <td className="align-top px-4 py-3 border border-gray-200 font-semibold text-gray-700">
+                    3.4
+                  </td>
+                  <td className="align-top px-4 py-3 border border-gray-200 text-gray-700">
+                    Peluang untuk kegiatan asesmen terintegrasi dan mencatat
+                    setiap perubahan yang diperlukan untuk alat asesmen
+                  </td>
+                  <td className="px-4 py-3 border border-gray-200">
+                    <AdaTidakAdaToggle
+                      ada={peluangTerintegrasi.ada}
+                      onChange={(v) =>
+                        setPeluangTerintegrasi((p) => ({ ...p, ada: v }))
+                      }
+                      isEditing={isEditing}
+                      suffix="peluang Jika Ada, tuliskan:"
+                    />
+                    <EditableText
+                      value={peluangTerintegrasi.catatan}
+                      onChange={(v) =>
+                        setPeluangTerintegrasi((p) => ({
+                          ...p,
+                          catatan: v,
+                        }))
+                      }
+                      isEditing={isEditing}
+                      className="text-sm text-gray-700 mt-1"
+                      rows={10}
+                    />
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p className="text-xs italic text-gray-500 px-1">
+            *Coret yang tidak perlu
+          </p>
+        </div>
+
+        {/* ============================================================ */}
+        {/* Konfirmasi dengan orang yang relevan                          */}
+        {/* ============================================================ */}
+        <div className="border border-gray-200">
+          <div className="px-4 py-2.5 border-b border-gray-200 font-bold text-gray-800">
+            Konfirmasi dengan orang yang relevan
+          </div>
+          <table className="w-full border-collapse text-sm table-fixed">
+            <colgroup>
+              <col className="w-72" />
+              <col />
+              <col className="w-56" />
+            </colgroup>
+            <thead>
+              <tr className="text-xs font-semibold text-gray-700">
+                <th className="px-4 py-2.5 border border-gray-200 bg-gray-50">
+                  Orang yang relevan
+                </th>
+                <th className="px-4 py-2.5 border border-gray-200 bg-gray-50">
+                  Nama
+                </th>
+                <th className="px-4 py-2.5 border border-gray-200 bg-gray-50">
+                  Tanda Tangan dan Tanggal
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {konfirmasiOrangRows.map((row) => (
+                <tr key={row.id}>
+                  <td className="px-4 py-3 border border-gray-200 text-gray-700">
+                    {row.orang}
+                  </td>
+                  <td className="px-3 py-2 border border-gray-200">
+                    <input
+                      type="text"
+                      value={row.nama}
+                      onChange={(e) =>
+                        updateKonfirmasiOrang(row.id, e.target.value)
+                      }
+                      disabled={!isEditing}
+                      className={inputClass}
+                    />
+                  </td>
+                  <td className="px-2 py-2 border border-gray-200">
+                    <SignatureBox
+                      value={row.ttd}
+                      onChange={(v) => updateKonfirmasiOrangTtd(row.id, v)}
+                      isEditing={isEditing}
+                      inputId={`${row.id}-ttd-upload`}
+                    />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {/* ============================================================ */}
+        {/* PENYUSUN DAN VALIDATOR                                        */}
+        {/* ============================================================ */}
+        <div className="border border-gray-200">
+          <div className="px-4 py-2.5 border-b border-gray-200 font-bold text-gray-800 bg-gray-50">
+            PENYUSUN DAN VALIDATOR
+          </div>
+          <table className="w-full border-collapse text-sm">
+            <thead>
+              <tr className="text-xs font-semibold text-gray-700">
+                <th className="w-32 px-3 py-2.5 border border-gray-200 bg-gray-50">
+                  STATUS
+                </th>
+                <th className="w-14 px-3 py-2.5 border border-gray-200 bg-gray-50">
+                  NO
+                </th>
+                <th className="px-3 py-2.5 border border-gray-200 bg-gray-50 text-left">
+                  NAMA
+                </th>
+                <th className="w-44 px-3 py-2.5 border border-gray-200 bg-gray-50">
+                  NOMOR MET
+                </th>
+                <th className="w-56 px-3 py-2.5 border border-gray-200 bg-gray-50">
+                  TANDA TANGAN DAN TANGGAL
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {penyusunRows.map((row, idx) => (
+                <tr key={row.id}>
+                  {(idx === 0 || idx === 2) && (
+                    <td
+                      rowSpan={2}
+                      className="align-middle px-3 py-3 border border-gray-200 text-center font-semibold text-gray-700 bg-gray-50"
+                    >
+                      {row.status}
+                    </td>
+                  )}
+                  <td className="px-3 py-2 border border-gray-200 text-center text-gray-600">
+                    {row.no}
+                  </td>
+                  <td className="px-3 py-2 border border-gray-200">
+                    <input
+                      type="text"
+                      value={row.nama}
+                      onChange={(e) =>
+                        updatePenyusun(row.id, "nama", e.target.value)
+                      }
+                      disabled={!isEditing}
+                      className={compactInputClass}
+                    />
+                  </td>
+                  <td className="px-3 py-2 border border-gray-200">
+                    <input
+                      type="text"
+                      value={row.nomorMet}
+                      onChange={(e) =>
+                        updatePenyusun(row.id, "nomorMet", e.target.value)
+                      }
+                      disabled={!isEditing}
+                      className={`${compactInputClass} font-mono`}
+                    />
+                  </td>
+                  <td className="px-2 py-2 border border-gray-200">
+                    <SignatureBox
+                      value={row.ttd}
+                      onChange={(v) => updatePenyusunTtd(row.id, v)}
+                      isEditing={isEditing}
+                      inputId={`${row.id}-ttd-upload`}
+                    />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </div>
 
