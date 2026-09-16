@@ -785,28 +785,10 @@ export default function Ia04bPage() {
             <thead>
               <tr className="text-xs font-semibold text-gray-700">
                 <th
-                  rowSpan={2}
-                  className="px-2 py-2.5 border border-gray-200 align-middle bg-gray-50"
+                  colSpan={4}
+                  className="px-3 py-2.5 border border-gray-200 bg-gray-50 text-left"
                 >
-                  No
-                </th>
-                <th
-                  rowSpan={2}
-                  className="px-3 py-2.5 border border-gray-200 align-middle bg-gray-50 text-left"
-                >
-                  Lingkup Penilaian proyek atau kegiatan terstruktur lainnya
-                </th>
-                <th
-                  rowSpan={2}
-                  className="px-3 py-2.5 border border-gray-200 align-middle bg-gray-50 text-left"
-                >
-                  Daftar Pertanyaan
-                </th>
-                <th
-                  rowSpan={2}
-                  className="px-3 py-2.5 border border-gray-200 align-middle bg-gray-50 text-left"
-                >
-                  Kesesuaian dengan standar kompetensi kerja (unit/elemen/ KUK)
+                  Aspek Penilaian
                 </th>
                 <th
                   colSpan={2}
@@ -816,6 +798,18 @@ export default function Ia04bPage() {
                 </th>
               </tr>
               <tr className="text-xs font-semibold text-gray-700">
+                <th className="px-2 py-2.5 border border-gray-200 bg-gray-50">
+                  No
+                </th>
+                <th className="px-3 py-2.5 border border-gray-200 bg-gray-50 text-left">
+                  Lingkup Penyajian proyek atau kegiatan terstruktur lainnya
+                </th>
+                <th className="px-3 py-2.5 border border-gray-200 bg-gray-50 text-left">
+                  Daftar Pertanyaan
+                </th>
+                <th className="px-3 py-2.5 border border-gray-200 bg-gray-50 text-left">
+                  Kesesuaian dengan standar kompetensi kerja (unit/elemen/ KUK)
+                </th>
                 <th className="px-2 py-2.5 border border-gray-200 bg-gray-50">
                   Ya
                 </th>
