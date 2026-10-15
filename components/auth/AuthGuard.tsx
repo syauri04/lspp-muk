@@ -1,36 +1,41 @@
 "use client";
 
+import { useEffect } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
-import { useRouter, usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
-import GlobalLoader from "@/components/ui/loader";
+import { loginUrlFor } from "@/lib/auth/returnTo";
+import { FullScreenLoader } from "@/components/ui/PageLoader";
+import type { MukRole } from "@/types/auth";
 
-export default function AuthGuard({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, isLoading } = useAuth();
+/**
+ * Guard client-side (token ada di localStorage, tidak terbaca di server/proxy).
+ * Ini hanya untuk UX; keamanan sebenarnya ada di API (token + scope kepemilikan).
+ */
+export default function AuthGuard({
+  children,
+  roles,
+}: {
+  children: React.ReactNode;
+  roles?: MukRole[];
+}) {
+  const { isAuthenticated, isLoading, role } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
 
-  const [mounted, setMounted] = useState(false);
+  const roleDitolak = isAuthenticated && roles && role && !roles.includes(role);
 
   useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  useEffect(() => {
-    if (mounted && !isLoading && !isAuthenticated) {
-      const redirectUrl = pathname
-        ? `/login?redirect=${encodeURIComponent(pathname)}`
-        : "/login";
-      router.replace(redirectUrl);
+    if (isLoading) return;
+    if (!isAuthenticated) {
+      const fullPath = typeof window !== "undefined" ? pathname + window.location.search : pathname;
+      router.replace(loginUrlFor(fullPath));
+    } else if (roleDitolak) {
+      router.replace("/dashboard");
     }
-  }, [mounted, isAuthenticated, isLoading, router, pathname]);
+  }, [isAuthenticated, isLoading, roleDitolak, router, pathname]);
 
-  if (!mounted || isLoading) {
-    return <GlobalLoader />;
-  }
-
-  if (!isAuthenticated) {
-    return null;
+  if (isLoading || !isAuthenticated || roleDitolak) {
+    return <FullScreenLoader />;
   }
 
   return <>{children}</>;

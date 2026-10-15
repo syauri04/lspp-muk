@@ -35,7 +35,7 @@ export default function RootLayout({
 }>) {
   return (
     <html
-      lang="en"
+      lang="id"
       className={`${montserrat.variable} ${openSans.variable} antialiased`}
     >
       <body>

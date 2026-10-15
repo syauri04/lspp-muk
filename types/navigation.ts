@@ -1,20 +1,26 @@
 import { type LucideIcon } from "lucide-react";
+import type { StatusDokumen } from "@/types/penilaian";
+
+export interface NavItem {
+  name: string;
+  href: string;
+  icon?: LucideIcon;
+  usePageBadge?: boolean;
+  /** Status dokumen (menu Dokumen Sertifikasi). */
+  status?: StatusDokumen;
+  locked?: boolean;
+  lockedReason?: string | null;
+  /** Hanya aktif jika path persis sama (bukan prefix). */
+  exact?: boolean;
+  /** Label kecil di kanan menu (mis. metode terpilih "TPD"). */
+  badgeText?: string;
+  /** Sub-menu bagian di dalam halaman (href berisi #anchor). */
+  children?: NavSubItem[];
+}
 
 export interface NavSubItem {
   name: string;
   href: string;
-  badge?: string | number;
-  usePageBadge?: boolean;
-}
-
-export interface NavItem {
-  name: string;
-  href?: string;
-  icon?: LucideIcon;
-  badge?: string | number;
-  usePageBadge?: boolean;
-  isCategory?: boolean;
-  children?: NavSubItem[];
 }
 
 export interface NavSection {

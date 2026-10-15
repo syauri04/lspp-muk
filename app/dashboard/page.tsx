@@ -1,5 +1,5 @@
-import { DashboardClient } from "@/components/dashboard/DashboardClient";
+import { PenilaianList } from "@/components/dashboard/PenilaianList";
 
 export default function Page() {
-  return <DashboardClient />;
+  return <PenilaianList />;
 }

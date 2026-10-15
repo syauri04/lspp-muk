@@ -4,6 +4,7 @@ import { usePathname } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
+import { ROLE_LABEL } from "@/types/auth";
 import { getBreadcrumbFromPath } from "@/lib/navigation";
 import { ChevronRight } from "lucide-react";
 
@@ -26,19 +27,20 @@ export function TopbarHero() {
         <div className="flex items-center sm:flex-col sm:items-center gap-3 sm:gap-1 shrink-0">
           <div className="w-14 h-14 sm:w-18 sm:h-18 md:w-20 md:h-20 rounded-full border-2 border-white/30 overflow-hidden relative shadow-md">
             <Image
-              src={user?.avatar || "/images/avatar.png"}
-              alt={user?.name || "User Avatar"}
+              src={user?.avatar_url || "/images/avatar.png"}
+              alt={user?.name || "Foto profil"}
               width={80}
               height={80}
+              unoptimized={!!user?.avatar_url}
               className="w-full h-full object-cover"
             />
           </div>
           <div className="text-left sm:text-center text-white">
             <p className="font-bold text-xs sm:text-sm leading-tight">
-              {user?.name || "Ahmad Riyadh Smith"}
+              {user?.name}
             </p>
             <p className="text-[11px] sm:text-xs opacity-80">
-              {user?.role || "Asesor"}
+              {user ? ROLE_LABEL[user.role] : ""}
             </p>
           </div>
         </div>

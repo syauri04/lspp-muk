@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ChevronDown, User, Settings, LogOut, Shield } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
+import { ROLE_LABEL } from "@/types/auth";
 
 export function UserDropdown() {
   const { user, logout } = useAuth();
@@ -23,9 +24,10 @@ export function UserDropdown() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const handleLogout = () => {
-    logout();
-    router.push("/login");
+  const handleLogout = async () => {
+    setIsOpen(false);
+    await logout();
+    router.replace("/login");
   };
 
   const displayName = user?.name?.split(" ")[0] || "User";
@@ -39,10 +41,11 @@ export function UserDropdown() {
       >
         <div className="w-7 h-7 rounded-full bg-[#5C723D]/20 overflow-hidden relative border border-gray-200">
           <Image
-            src={user?.avatar || "/images/avatar.png"}
-            alt={user?.name || "User Avatar"}
+            src={user?.avatar_url || "/images/avatar.png"}
+            alt={user?.name || "Foto profil"}
             width={28}
             height={28}
+            unoptimized={!!user?.avatar_url}
             className="w-full h-full object-cover"
           />
         </div>
@@ -61,13 +64,13 @@ export function UserDropdown() {
         <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-lg border border-gray-100 py-1.5 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
           <div className="px-4 py-2 border-b border-gray-100">
             <p className="text-sm font-semibold text-gray-800 truncate">
-              {user?.name || "Ahmad Riyadh Smith"}
+              {user?.name}
             </p>
-            <p className="text-xs text-gray-500 truncate">{user?.email || "admin@lspp.id"}</p>
+            <p className="text-xs text-gray-500 truncate">{user?.email}</p>
             <div className="mt-1 flex items-center gap-1">
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-[#F2F5E9] text-[#5A7A22] border border-[#8AA53C]/30">
                 <Shield size={10} />
-                {user?.role || "Asesor"}
+                {user ? ROLE_LABEL[user.role] : ""}
               </span>
             </div>
           </div>

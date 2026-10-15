@@ -1,13 +1,29 @@
-export interface ApiResponse<T = unknown> {
-  success: boolean;
-  message?: string;
+/** Respons tunggal Laravel API Resource. */
+export interface ApiResource<T> {
   data: T;
 }
 
-export interface PaginatedResponse<T = unknown> {
-  items: T[];
-  total: number;
-  page: number;
-  pageSize: number;
-  totalPages: number;
+/** Respons paginasi Laravel (ResourceCollection + paginate()). */
+export interface Paginated<T> {
+  data: T[];
+  links: {
+    first: string | null;
+    last: string | null;
+    prev: string | null;
+    next: string | null;
+  };
+  meta: {
+    current_page: number;
+    last_page: number;
+    per_page: number;
+    total: number;
+    from: number | null;
+    to: number | null;
+  };
+}
+
+/** Error validasi Laravel (422). */
+export interface ValidationErrorBody {
+  message: string;
+  errors?: Record<string, string[]>;
 }

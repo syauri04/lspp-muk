@@ -1,86 +1,139 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useState, ReactNode } from "react";
-import { User, LoginCredentials } from "@/types/auth";
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState, ReactNode } from "react";
+import { toast } from "sonner";
+import { mutate } from "swr";
+import type { LoginCredentials, MukRole, User } from "@/types/auth";
 import {
-  MOCK_USER,
-  getStoredToken,
-  getStoredUser,
-  setStoredAuth,
+  cleanupLegacyStorage,
+  getStoredSession,
   removeStoredAuth,
+  setStoredAuth,
+  setStoredUser,
 } from "@/lib/auth/authStore";
+import { mukAuth } from "@/lib/api/muk";
+import { UNAUTHORIZED_EVENT, statusError } from "@/lib/api/axios";
 
 interface AuthContextType {
   user: User | null;
-  token: string | null;
+  role: MukRole | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (credentials: LoginCredentials) => Promise<{ success: boolean; message?: string }>;
-  logout: () => void;
+  login: (role: MukRole, credentials: LoginCredentials) => Promise<User>;
+  logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// setTimeout maksimal ~24,8 hari; token MUK hanya 8 jam jadi aman, tapi tetap dibatasi.
+const MAX_TIMEOUT = 2_147_483_647;
+
+/** Kosongkan cache SWR agar data user sebelumnya tidak terlihat oleh user berikutnya. */
+function clearDataCache() {
+  void mutate(() => true, undefined, { revalidate: false });
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [token, setToken] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isLoading, setIsLoading] = useState(true);
+  const expiryTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  useEffect(() => {
-    // Initial check on mount
-    const storedToken = getStoredToken();
-    const storedUser = getStoredUser();
-
-    if (storedToken && storedUser) {
-      // Async frame to avoid immediate synchronous setState during hydration
-      queueMicrotask(() => {
-        setToken(storedToken);
-        setUser(storedUser);
-        setIsLoading(false);
-      });
-    } else {
-      queueMicrotask(() => {
-        setIsLoading(false);
-      });
-    }
+  const clearSession = useCallback(() => {
+    removeStoredAuth();
+    setUser(null);
+    clearDataCache();
+    if (expiryTimer.current) clearTimeout(expiryTimer.current);
   }, []);
 
-  const login = async (credentials: LoginCredentials): Promise<{ success: boolean; message?: string }> => {
-    setIsLoading(true);
+  const scheduleExpiry = useCallback(
+    (expiresAt: string | null) => {
+      if (expiryTimer.current) clearTimeout(expiryTimer.current);
+      if (!expiresAt) return;
+      const ms = new Date(expiresAt).getTime() - Date.now();
+      expiryTimer.current = setTimeout(() => {
+        clearSession();
+        toast.info("Sesi Anda telah berakhir. Silakan masuk kembali.");
+      }, Math.min(Math.max(ms, 0), MAX_TIMEOUT));
+    },
+    [clearSession],
+  );
 
-    // Simulate mock network latency
-    await new Promise((resolve) => setTimeout(resolve, 600));
+  // Bootstrap: validasi token tersimpan ke server lewat /me (user tersimpan bisa usang).
+  useEffect(() => {
+    cleanupLegacyStorage();
+    const session = getStoredSession();
 
-    // Mock verification: accept any valid-looking login
-    if (!credentials.email || credentials.email.trim() === "") {
-      setIsLoading(false);
-      return { success: false, message: "Email wajib diisi." };
+    if (!session) {
+      queueMicrotask(() => setIsLoading(false));
+      return;
     }
 
-    const mockToken = "mock_jwt_token_" + Date.now();
-    const loggedInUser: User = {
-      ...MOCK_USER,
-      email: credentials.email,
+    let aktif = true;
+    mukAuth
+      .me()
+      .then((fresh) => {
+        if (!aktif) return;
+        setStoredUser(fresh);
+        setUser(fresh);
+        scheduleExpiry(session.expiresAt);
+      })
+      .catch((err) => {
+        if (!aktif) return;
+        // 401/403 = token tidak berlaku. Error jaringan: pakai data tersimpan, jangan paksa logout.
+        const status = statusError(err);
+        if (status === 401 || status === 403) clearSession();
+        else if (session.user) {
+          setUser(session.user);
+          scheduleExpiry(session.expiresAt);
+        }
+      })
+      .finally(() => aktif && setIsLoading(false));
+
+    return () => {
+      aktif = false;
     };
+  }, [clearSession, scheduleExpiry]);
 
-    setStoredAuth(mockToken, loggedInUser);
-    setToken(mockToken);
-    setUser(loggedInUser);
-    setIsLoading(false);
+  // Token ditolak server di tengah sesi (kedaluwarsa / dicabut).
+  useEffect(() => {
+    const onUnauthorized = () => {
+      setUser(null);
+      clearDataCache();
+      if (expiryTimer.current) clearTimeout(expiryTimer.current);
+    };
+    window.addEventListener(UNAUTHORIZED_EVENT, onUnauthorized);
+    return () => window.removeEventListener(UNAUTHORIZED_EVENT, onUnauthorized);
+  }, []);
 
-    return { success: true };
-  };
+  useEffect(() => () => {
+    if (expiryTimer.current) clearTimeout(expiryTimer.current);
+  }, []);
 
-  const logout = () => {
-    removeStoredAuth();
-    setToken(null);
-    setUser(null);
-  };
+  const login = useCallback(
+    async (role: MukRole, credentials: LoginCredentials) => {
+      const { token, user: loggedIn, expires_at } = await mukAuth.login(role, credentials);
+      clearDataCache();
+      setStoredAuth(token, loggedIn, expires_at);
+      setUser(loggedIn);
+      scheduleExpiry(expires_at);
+      return loggedIn;
+    },
+    [scheduleExpiry],
+  );
 
-  const value = {
+  const logout = useCallback(async () => {
+    try {
+      await mukAuth.logout();
+    } catch {
+      // Tetap hapus sesi lokal walau request gagal (token mungkin sudah tidak berlaku).
+    }
+    clearSession();
+  }, [clearSession]);
+
+  const value: AuthContextType = {
     user,
-    token,
-    isAuthenticated: !!token && !!user,
+    role: user?.role ?? null,
+    isAuthenticated: !!user,
     isLoading,
     login,
     logout,
