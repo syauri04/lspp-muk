@@ -22,6 +22,7 @@ export const STATUS_DOKUMEN: Record<StatusDokumen, { label: string; tone: Tone }
   belum_diisi: { label: "Belum diisi", tone: "gray" },
   draft: { label: "Draft", tone: "amber" },
   menunggu_review: { label: "Menunggu review", tone: "blue" },
+  menunggu_persetujuan: { label: "Menunggu persetujuan asesi", tone: "blue" },
   selesai: { label: "Selesai", tone: "green" },
 };
 

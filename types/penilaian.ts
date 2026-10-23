@@ -5,7 +5,7 @@ export type StatusPenilaian =
   | "selesai_kompeten"
   | "selesai_belum_kompeten";
 
-export type StatusDokumen = "belum_diisi" | "draft" | "menunggu_review" | "selesai";
+export type StatusDokumen = "belum_diisi" | "draft" | "menunggu_review" | "menunggu_persetujuan" | "selesai";
 
 export type MetodeAsesmen = "kt" | "tpd" | "vp";
 

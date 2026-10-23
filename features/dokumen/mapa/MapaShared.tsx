@@ -199,7 +199,12 @@ export function TtdPenandatangan({
       ) : (
         <div className="h-16 w-32 rounded-lg bg-gray-100 animate-pulse" aria-label="Memuat tanda tangan" />
       )}
-      {baris?.tanggal && <span className="text-[11px] text-gray-500">{formatTanggal(baris.tanggal)}</span>}
+      {baris?.tanggal ? (
+        <span className="text-[11px] text-gray-500">{formatTanggal(baris.tanggal)}</span>
+      ) : (
+        // Tanggal tidak diisi di CMS: otomatis = tanggal dokumen dikirim asesor.
+        id !== null && <span className="text-[10px] italic text-gray-400">Tanggal terisi saat dokumen dikirim</span>
+      )}
     </div>
   );
 }

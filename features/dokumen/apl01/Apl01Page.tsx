@@ -21,6 +21,7 @@ import { SignatureDialog } from "@/components/dokumen/SignatureDialog";
 import { SignatureImage } from "@/components/dokumen/SignatureImage";
 import type { DokumenPageProps } from "@/features/dokumen/registry";
 import type { Apl01BuktiPersyaratan, Apl01Isian, Apl01Payload, Apl01Patch } from "@/types/dokumen";
+import { LampiranRelevan } from "@/features/dokumen/apl01/LampiranRelevan";
 
 const SLUG = "apl-01";
 const SECTIONS = ["rincian", "data-sertifikasi", "bukti-kelengkapan"];
@@ -746,6 +747,7 @@ function SectionBuktiKelengkapan({
   onHapusBukti,
   onLihatBukti,
   onTandaTangan,
+  lampiran,
 }: {
   payload: Apl01Payload;
   isian: Apl01Isian;
@@ -758,6 +760,8 @@ function SectionBuktiKelengkapan({
   onHapusBukti: (bukti: Apl01BuktiPersyaratan) => void;
   onLihatBukti: (bukti: Apl01BuktiPersyaratan) => void;
   onTandaTangan: () => void;
+  /** "3. Lampiran Bukti yang relevan". */
+  lampiran: React.ReactNode;
 }) {
   const meta = payload.dokumen;
   const accept = payload.unggah.mimes.map((m) => `.${m}`).join(",");
@@ -804,6 +808,8 @@ function SectionBuktiKelengkapan({
           <h3 className="text-sm font-bold text-gray-800">2. Bukti Administratif</h3>
           <PersyaratanTable items={buktiAdministratif} isEditing={false} />
         </div>
+
+        {lampiran}
 
         <table className="w-full border border-gray-300 border-collapse text-sm">
           <tbody>
@@ -1152,6 +1158,7 @@ function Apl01Form({ payload, setPayload }: { payload: Apl01Payload; setPayload:
           onHapusBukti={hapusBukti}
           onLihatBukti={lihatBukti}
           onTandaTangan={bukaTandaTangan}
+          lampiran={<LampiranRelevan payload={payload} editable={isEditing && bisaUbah} onTerima={(res) => terima(res)} />}
         />
       </div>
 

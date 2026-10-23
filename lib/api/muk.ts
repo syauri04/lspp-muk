@@ -48,6 +48,27 @@ export const mukDokumen = {
   submit: async <T>(id: number | string, slug: string) =>
     (await apiClient.post<ApiResource<T>>(`${swrKey.dokumen(id, slug)}/submit`)).data.data,
 
+  /** Pola disiapkan asesor -> dijawab asesi -> dinilai asesor (mis. FR.IA.03). */
+  persiapan: async <T, B>(id: number | string, slug: string, body: B) =>
+    (await apiClient.patch<ApiResource<T>>(`${swrKey.dokumen(id, slug)}/persiapan`, body)).data.data,
+
+  buka: async <T>(id: number | string, slug: string) =>
+    (await apiClient.post<ApiResource<T>>(`${swrKey.dokumen(id, slug)}/buka`)).data.data,
+
+  simpanPenilaian: async <T, B>(id: number | string, slug: string, body: B) =>
+    (await apiClient.patch<ApiResource<T>>(`${swrKey.dokumen(id, slug)}/penilaian`, body)).data.data,
+
+  nilai: async <T, B>(id: number | string, slug: string, body: B & { tanda_tangan: string }) =>
+    (await apiClient.post<ApiResource<T>>(`${swrKey.dokumen(id, slug)}/nilai`, body)).data.data,
+
+  /** Persetujuan pihak kedua dengan tanda tangan (asesi atas FR.AK.07 / FR.AK.01). */
+  setujui: async <T>(id: number | string, slug: string, dataUrl: string) =>
+    (await apiClient.post<ApiResource<T>>(`${swrKey.dokumen(id, slug)}/setujui`, { tanda_tangan: dataUrl })).data.data,
+
+  /** Pengisi menarik kembali dokumen yang masih menunggu persetujuan. */
+  tarik: async <T>(id: number | string, slug: string) =>
+    (await apiClient.post<ApiResource<T>>(`${swrKey.dokumen(id, slug)}/tarik`)).data.data,
+
   /** Tinjauan peninjau (asesor) atas dokumen, mis. FR.APL.02. */
   review: async <T>(id: number | string, slug: string, body: { hasil: string; catatan?: string | null; tanda_tangan?: string | null }) =>
     (await apiClient.post<ApiResource<T>>(`${swrKey.dokumen(id, slug)}/review`, body)).data.data,
@@ -69,6 +90,34 @@ export const mukDokumen = {
 
   berkasBuktiApl01: async (id: number | string, buktiId: number) =>
     (await apiClient.get<Blob>(`${swrKey.dokumen(id, "apl-01")}/bukti/${buktiId}`, { responseType: "blob" })).data,
+
+  /** FR.APL.01 lampiran bukti yang relevan: tambah baris asesi. */
+  tambahRelevanApl01: async <T>(id: number | string, nama: string) =>
+    (await apiClient.post<ApiResource<T>>(`${swrKey.dokumen(id, "apl-01")}/relevan`, { nama })).data.data,
+
+  ubahRelevanApl01: async <T>(id: number | string, relevanId: number, data: { nama?: string; link?: string | null }) =>
+    (await apiClient.patch<ApiResource<T>>(`${swrKey.dokumen(id, "apl-01")}/relevan/${relevanId}`, data)).data.data,
+
+  hapusRelevanApl01: async <T>(id: number | string, relevanId: number) =>
+    (await apiClient.delete<ApiResource<T>>(`${swrKey.dokumen(id, "apl-01")}/relevan/${relevanId}`)).data.data,
+
+  unggahRelevanApl01: async <T>(id: number | string, relevanId: number, file: File) => {
+    const form = new FormData();
+    form.append("file", file);
+    return (
+      await apiClient.post<ApiResource<T>>(`${swrKey.dokumen(id, "apl-01")}/relevan/${relevanId}/file`, form, {
+        headers: { "Content-Type": "multipart/form-data" },
+        timeout: 120000,
+      })
+    ).data.data;
+  },
+
+  hapusBerkasRelevanApl01: async <T>(id: number | string, relevanId: number) =>
+    (await apiClient.delete<ApiResource<T>>(`${swrKey.dokumen(id, "apl-01")}/relevan/${relevanId}/file`)).data.data,
+
+  /** Berkas lampiran relevan (asesi pemilik; asesor untuk FR.IA.08). */
+  berkasRelevanApl01: async (id: number | string, relevanId: number) =>
+    (await apiClient.get<Blob>(`${swrKey.dokumen(id, "apl-01")}/relevan/${relevanId}/file`, { responseType: "blob" })).data,
 
   /** FR.APL.02: unggah berkas bukti ke baris yang ada (buktiId) atau baris baru. */
   unggahBuktiApl02: async <T>(id: number | string, elemenId: number, file: File, buktiId?: number | null) => {
