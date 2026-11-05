@@ -13,7 +13,8 @@ import { mukPenilaian } from "@/lib/api/muk";
 import { DEFAULT_AFTER_LOGIN, safeReturnTo } from "@/lib/auth/returnTo";
 import { ROLE_LABEL, type MukRole } from "@/types/auth";
 
-const MAIN_SITE_URL = process.env.NEXT_PUBLIC_MAIN_SITE_URL || "https://lspp306.com";
+const MAIN_SITE_URL =
+  process.env.NEXT_PUBLIC_MAIN_SITE_URL || "https://lspp306.com";
 
 const inputClass =
   "h-12 md:h-14 rounded-xl border-gray-200 focus:ring-[#5C723D]/20 focus:border-[#5C723D] px-4 text-sm md:text-base";
@@ -24,7 +25,10 @@ const inputClass =
  */
 async function tujuanSetelahLogin(): Promise<string> {
   try {
-    const res = await mukPenilaian.list({ kelompok: "perlu_tindakan", per_page: 2 });
+    const res = await mukPenilaian.list({
+      kelompok: "perlu_tindakan",
+      per_page: 2,
+    });
     if (res.meta.total === 1) return `/dashboard/penilaian/${res.data[0].id}`;
   } catch {
     // Abaikan: dashboard tetap bisa menampilkan daftarnya.
@@ -66,8 +70,10 @@ function LoginForm() {
       // 429 dari throttle per-IP tidak punya field errors -> toast.
       const fe = fieldErrors(err);
       if (Object.keys(fe).length > 0) setErrors(fe);
-      else if (statusError(err) === 429) toast.error("Terlalu banyak percobaan login. Coba lagi sebentar lagi.");
-      else toast.error(pesanError(err, "Gagal masuk. Periksa kembali akun Anda."));
+      else if (statusError(err) === 429)
+        toast.error("Terlalu banyak percobaan login. Coba lagi sebentar lagi.");
+      else
+        toast.error(pesanError(err, "Gagal masuk. Periksa kembali akun Anda."));
       setIsSubmitting(false);
     }
   };
@@ -77,13 +83,27 @@ function LoginForm() {
       <div className="bg-white w-full h-full md:h-auto max-w-145 rounded-none md:rounded-[3rem] shadow-none md:shadow-[0_20px_60px_rgba(0,0,0,0.05)] p-6 sm:p-10 md:p-16 my-0 flex flex-col items-center justify-center md:justify-start overflow-y-auto md:overflow-visible">
         <div className="mb-6 md:mb-8 flex flex-col items-center text-center">
           <div className="relative w-60 h-16 md:w-72 md:h-20 mb-4">
-            <Image src="/images/logo-nav.png" alt="LSPP 306 Logo" fill className="object-contain" priority />
+            <Image
+              src="/images/logo-nav.png"
+              alt="LSPP 306 Logo"
+              fill
+              className="object-contain"
+              priority
+            />
           </div>
-          <h1 className="text-2xl md:text-3xl font-bold text-gray-800 mb-1">Sertifikasi Paperless</h1>
-          <p className="text-sm md:text-base text-gray-400">Masuk sebagai asesi atau asesor</p>
+          <h1 className="text-2xl md:text-3xl font-bold text-gray-800 mb-1">
+            Sertifikasi
+          </h1>
+          <p className="text-sm md:text-base text-gray-400">
+            Masuk sebagai asesi atau asesor
+          </p>
         </div>
 
-        <div role="tablist" aria-label="Pilih peran" className="w-full grid grid-cols-2 gap-1 p-1 mb-6 bg-gray-100 rounded-xl">
+        <div
+          role="tablist"
+          aria-label="Pilih peran"
+          className="w-full grid grid-cols-2 gap-1 p-1 mb-6 bg-gray-100 rounded-xl"
+        >
           {(["asesi", "asesor"] as MukRole[]).map((r) => (
             <button
               key={r}
@@ -95,7 +115,9 @@ function LoginForm() {
                 setErrors({});
               }}
               className={`h-10 rounded-lg text-sm font-semibold transition-all cursor-pointer ${
-                role === r ? "bg-white text-[#5C723D] shadow-sm" : "text-gray-500 hover:text-gray-700"
+                role === r
+                  ? "bg-white text-[#5C723D] shadow-sm"
+                  : "text-gray-500 hover:text-gray-700"
               }`}
             >
               {ROLE_LABEL[r]}
@@ -103,9 +125,16 @@ function LoginForm() {
           ))}
         </div>
 
-        <form onSubmit={handleSubmit} className="w-full space-y-4 md:space-y-5" noValidate>
+        <form
+          onSubmit={handleSubmit}
+          className="w-full space-y-4 md:space-y-5"
+          noValidate
+        >
           <div className="space-y-1 md:space-y-2">
-            <label htmlFor="email" className="text-xs md:text-sm font-semibold text-gray-600 ml-1 flex items-center gap-1.5">
+            <label
+              htmlFor="email"
+              className="text-xs md:text-sm font-semibold text-gray-600 ml-1 flex items-center gap-1.5"
+            >
               <Mail size={14} className="text-gray-400" />
               <span>Email</span>
             </label>
@@ -122,14 +151,21 @@ function LoginForm() {
               className={inputClass}
             />
             {errors.email && (
-              <p id="email-error" className="text-xs text-red-600 ml-1" role="alert">
+              <p
+                id="email-error"
+                className="text-xs text-red-600 ml-1"
+                role="alert"
+              >
                 {errors.email}
               </p>
             )}
           </div>
 
           <div className="space-y-1 md:space-y-2">
-            <label htmlFor="password" className="text-xs md:text-sm font-semibold text-gray-600 ml-1 flex items-center gap-1.5">
+            <label
+              htmlFor="password"
+              className="text-xs md:text-sm font-semibold text-gray-600 ml-1 flex items-center gap-1.5"
+            >
               <KeyRound size={14} className="text-gray-400" />
               <span>Kata Sandi</span>
             </label>
@@ -148,13 +184,21 @@ function LoginForm() {
               <button
                 type="button"
                 onClick={() => setShowPassword((v) => !v)}
-                aria-label={showPassword ? "Sembunyikan kata sandi" : "Tampilkan kata sandi"}
+                aria-label={
+                  showPassword
+                    ? "Sembunyikan kata sandi"
+                    : "Tampilkan kata sandi"
+                }
                 className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 text-gray-400 hover:text-gray-600 cursor-pointer"
               >
                 {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
             </div>
-            {errors.password && <p className="text-xs text-red-600 ml-1" role="alert">{errors.password}</p>}
+            {errors.password && (
+              <p className="text-xs text-red-600 ml-1" role="alert">
+                {errors.password}
+              </p>
+            )}
           </div>
 
           <div className="pt-2 md:pt-4">
@@ -178,13 +222,22 @@ function LoginForm() {
             {role === "asesi" ? (
               <>
                 Gunakan email &amp; kata sandi akun Anda di{" "}
-                <a href={MAIN_SITE_URL} target="_blank" rel="noopener noreferrer" className="font-semibold text-[#5C723D] hover:underline">
+                <a
+                  href={MAIN_SITE_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-semibold text-[#5C723D] hover:underline"
+                >
                   website LSPP 306
                 </a>
-                . Mendaftar dengan Google? Buat kata sandi terlebih dahulu di sana.
+                . Mendaftar dengan Google? Buat kata sandi terlebih dahulu di
+                sana.
               </>
             ) : (
-              <>Akun asesor dibuat oleh admin LSPP. Lupa kata sandi? Hubungi admin.</>
+              <>
+                Akun asesor dibuat oleh admin LSPP. Lupa kata sandi? Hubungi
+                admin.
+              </>
             )}
           </p>
         </form>
