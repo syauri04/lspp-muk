@@ -1,5 +1,7 @@
 "use client";
 
+import { KekuranganKirim } from "@/components/dokumen/KekuranganKirim";
+import { AlasanKoreksiDialog, KoreksiInfo, KoreksiTombol } from "@/components/dokumen/KoreksiAdmin";
 /*
  * FR.MAPA.01 - Merencanakan Aktivitas dan Proses Asesmen (diisi asesor).
  * Tampilan & style mengikuti mockup app/dashboard/fr/mapa-01; data & aksi disambungkan ke API.
@@ -141,11 +143,15 @@ function EmojiPicker({ value, onChange, isEditing }: { value: Emoji | null; onCh
             onClick={() => onChange(key)}
             aria-label={key}
             aria-pressed={selected}
-            className={`flex items-center justify-center rounded-full p-0.5 transition-all ${
+            className={`relative flex items-center justify-center rounded-full p-0.5 transition-all ${
               isEditing ? "cursor-pointer hover:bg-gray-100" : "cursor-default"
             }`}
           >
-            <Icon size={22} strokeWidth={2} className="text-gray-900" fill={selected ? "#F5C542" : "none"} />
+            {/* Latar kuning hanya di wajah (lingkaran ikon), mata & mulut tetap terlihat di atasnya. */}
+            {selected && (
+              <span aria-hidden className="absolute left-1/2 top-1/2 size-4.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#F5C542]" />
+            )}
+            <Icon size={22} strokeWidth={2} className="relative text-gray-900" fill="none" />
           </button>
         );
       })}
@@ -219,7 +225,9 @@ function Mapa01Form({ payload, setPayload }: { payload: Mapa01Payload; setPayloa
   );
 
   const siapSelesai = payload.template_lengkap && !f.dirty;
-  const kontrol = (
+  const kontrol = f.bisaKoreksi ? (
+    <KoreksiTombol isEditing={f.isEditing} onKoreksi={() => f.setIsEditing(true)} onBatal={f.batalKoreksi} proses={f.koreksi.proses} />
+  ) : (
     <MapaControls
       bisaUbah={f.bisaUbah}
       isEditing={f.isEditing}
@@ -250,6 +258,10 @@ function Mapa01Form({ payload, setPayload }: { payload: Mapa01Payload; setPayloa
         </div>
         {kontrol}
       </div>
+
+      <KoreksiInfo meta={meta} isEditing={f.isEditing} />
+      {f.bisaKoreksi && <AlasanKoreksiDialog k={f.koreksi} nama={f.nama} />}
+      {f.bisaUbah && !f.isEditing && !f.dirty && <KekuranganKirim kekurangan={meta.kekurangan} />}
 
       {f.bisaUbah && payload.prefill && (
         <p className="text-sm text-gray-600 bg-gray-50 border border-gray-200 rounded-lg p-3">

@@ -1,4 +1,4 @@
-import { ClipboardList, Home, Info, List, ListChecks } from "lucide-react";
+import { ClipboardList, Home, Info, KeyRound, List, ListChecks, Printer } from "lucide-react";
 import type { NavSection } from "@/types/navigation";
 import type { MukRole } from "@/types/auth";
 import type { Penilaian } from "@/types/penilaian";
@@ -9,6 +9,11 @@ export function penilaianHref(id: number | string): string {
 
 export function metodeHref(id: number | string): string {
   return `/dashboard/penilaian/${id}/metode`;
+}
+
+/** Halaman cetak dokumen (Admin LSP); `dok` = slug tertentu saja. */
+export function cetakHref(id: number | string, dok?: string): string {
+  return `/cetak/penilaian/${id}${dok ? `?dok=${encodeURIComponent(dok)}` : ""}`;
 }
 
 export function dokumenHref(id: number | string, slug: string): string {
@@ -39,13 +44,15 @@ export function buildNavigation(role: MukRole | null, penilaian?: Penilaian | nu
       title: "Menu",
       items: [
         {
-          name: role === "asesor" ? "Daftar Asesmen" : "Sertifikasi Saya",
+          name: role === "asesor" ? "Daftar Asesmen" : role === "admin" ? "Penilaian" : "Sertifikasi Saya",
           href: "/dashboard",
           icon: Home,
           exact: true,
         },
         { name: "Informasi", href: "/dashboard/informasi", icon: Info },
         { name: "Skema Informasi", href: "/dashboard/skema", icon: List },
+        // Asesor: akun dibuat admin LSP, password dapat diganti sendiri.
+        ...(role === "asesor" ? [{ name: "Ubah Password", href: "/dashboard/settings", icon: KeyRound }] : []),
       ],
     },
   ];
@@ -67,6 +74,8 @@ export function buildNavigation(role: MukRole | null, penilaian?: Penilaian | nu
             href: `${dokumenHref(penilaian.id, d.slug)}#${b.anchor}`,
           })),
         })),
+        // Admin LSP (super admin): cetak dokumen yang sudah dikirim / selesai.
+        ...(role === "admin" ? [{ name: "Cetak Dokumen", href: cetakHref(penilaian.id), icon: Printer, exact: true }] : []),
         // Asesor: tentukan metode asesmen setelah FR.APL.02 "dapat dilanjutkan".
         ...(role === "asesor"
           ? [

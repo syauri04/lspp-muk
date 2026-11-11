@@ -10,7 +10,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import useSWR, { useSWRConfig } from "swr";
 import { toast } from "sonner";
-import { Check, ClipboardCheck, Link2, Loader2, Pencil, Plus, Save, Send, Trash2, Upload, X } from "lucide-react";
+import { Check, ClipboardCheck, Eye, Link2, Loader2, Paperclip, Pencil, Plus, Save, Send, Trash2, Upload, X } from "lucide-react";
 import { mukDokumen, swrKey } from "@/lib/api/muk";
 import { fieldErrors, pesanError, statusError } from "@/lib/api/axios";
 import { formatTanggal } from "@/lib/format";
@@ -20,8 +20,10 @@ import { ErrorState } from "@/components/common/ErrorState";
 import { PageLoader } from "@/components/ui/PageLoader";
 import { SignatureDialog } from "@/components/dokumen/SignatureDialog";
 import { SignatureImage } from "@/components/dokumen/SignatureImage";
+import { KekuranganKirim } from "@/components/dokumen/KekuranganKirim";
+import { AlasanKoreksiDialog, KoreksiInfo, KoreksiTombol, useKoreksiAdmin } from "@/components/dokumen/KoreksiAdmin";
 import type { DokumenPageProps } from "@/features/dokumen/registry";
-import type { Apl02Patch, Apl02Payload, Kompeten } from "@/types/dokumen";
+import type { Apl01BuktiRelevan, Apl02Patch, Apl02Payload, Kompeten } from "@/types/dokumen";
 
 const SLUG = "apl-02";
 
@@ -59,18 +61,26 @@ interface BuktiLokal {
   id: number | null;
   link: string;
   file: { nama: string } | null;
+  /** id lampiran FR.APL.01 yang dipilih (null = tidak memakai lampiran). */
+  lampiranId: number | null;
 }
 
 type JawabanLokal = Record<number, { kompeten: Kompeten | null; bukti: BuktiLokal[] }>;
 
 let kunciBaru = 0;
-const barisKosong = (): BuktiLokal => ({ key: `baru-${++kunciBaru}`, id: null, link: "", file: null });
+const barisKosong = (): BuktiLokal => ({ key: `baru-${++kunciBaru}`, id: null, link: "", file: null, lampiranId: null });
 
 function dariPayload(p: Apl02Payload): JawabanLokal {
   const hasil: JawabanLokal = {};
   p.unit_kompetensi.forEach((u) =>
     u.elemen.forEach((e) => {
-      const bukti = e.jawaban.bukti.map((b) => ({ key: `b-${b.id}`, id: b.id, link: b.link ?? "", file: b.file }));
+      const bukti = e.jawaban.bukti.map((b) => ({
+        key: `b-${b.id}`,
+        id: b.id,
+        link: b.link ?? "",
+        file: b.file,
+        lampiranId: b.lampiran?.id ?? null,
+      }));
       hasil[e.id] = { kompeten: e.jawaban.kompeten, bukti: bukti.length ? bukti : [barisKosong()] };
     }),
   );
@@ -82,7 +92,7 @@ function keBody(jawaban: JawabanLokal): Apl02Patch {
     jawaban: Object.entries(jawaban).map(([id, j]) => ({
       elemen_id: Number(id),
       kompeten: j.kompeten,
-      bukti: j.bukti.map((b) => ({ id: b.id, link: b.link.trim() || null })),
+      bukti: j.bukti.map((b) => ({ id: b.id, link: b.link.trim() || null, lampiran_id: b.lampiranId })),
     })),
   };
 }
@@ -198,6 +208,80 @@ function SignatureBox({
   );
 }
 
+/**
+ * Pilih bukti dari "Lampiran bukti yang relevan" FR.APL.01 (bagian 3). Pilihan hanya lampiran yang
+ * berisi berkas/link milik penilaian ini (dari server); bila tidak ada, dropdown kosong & nonaktif.
+ */
+function PilihLampiranApl01({
+  label,
+  pilihan,
+  dipilih,
+  dipakaiBarisLain,
+  editable,
+  onPilih,
+  onLihat,
+}: {
+  label: string;
+  pilihan: Apl01BuktiRelevan[];
+  dipilih: number | null;
+  dipakaiBarisLain: (number | null)[];
+  editable: boolean;
+  onPilih: (id: number | null) => void;
+  onLihat: (lampiran: Apl01BuktiRelevan) => void;
+}) {
+  const terpilih = pilihan.find((l) => l.id === dipilih) ?? null;
+
+  if (!editable) {
+    return terpilih ? (
+      <div className="pl-7 flex items-center gap-2 text-xs">
+        <Paperclip size={12} className="text-gray-400 shrink-0" aria-hidden />
+        <span className="text-gray-500 shrink-0">Lampiran APL.01:</span>
+        <span className="min-w-0 truncate text-gray-800" title={terpilih.nama}>{terpilih.nama}</span>
+        <button
+          type="button"
+          onClick={() => onLihat(terpilih)}
+          className="inline-flex items-center gap-1 text-[#5A7A22] hover:underline shrink-0 cursor-pointer"
+        >
+          <Eye size={12} /> Lihat
+        </button>
+      </div>
+    ) : null;
+  }
+
+  return (
+    <div className="pl-7 flex items-center gap-2">
+      <Paperclip size={12} className="text-gray-400 shrink-0" aria-hidden />
+      <select
+        aria-label={label}
+        value={dipilih ?? ""}
+        disabled={pilihan.length === 0}
+        onChange={(e) => onPilih(e.target.value ? Number(e.target.value) : null)}
+        className="flex-1 min-w-0 rounded-md border border-gray-200 bg-white px-2 py-1.5 text-xs text-gray-700 focus:outline-none focus:ring-1 focus:ring-[#82B124] disabled:bg-gray-50 disabled:text-gray-400"
+      >
+        <option value="">
+          {pilihan.length === 0 ? "Tidak ada lampiran di FR.APL.01" : "Pilih dari Lampiran FR.APL.01 (opsional)"}
+        </option>
+        {pilihan.map((l) => (
+          <option key={l.id} value={l.id} disabled={l.id !== dipilih && dipakaiBarisLain.includes(l.id)}>
+            {l.nama}
+            {l.file ? " (berkas)" : " (link)"}
+          </option>
+        ))}
+      </select>
+      {terpilih && (
+        <button
+          type="button"
+          onClick={() => onLihat(terpilih)}
+          aria-label={`Lihat lampiran ${terpilih.nama}`}
+          className="text-[#5A7A22] hover:text-[#3f5718] shrink-0 cursor-pointer"
+        >
+          <Eye size={14} />
+        </button>
+      )}
+    </div>
+  );
+}
+
 /** Kontrol unggah berkas pada satu baris bukti. */
 function BerkasBukti({
   file,
@@ -301,7 +385,7 @@ function Apl02Form({ payload, setPayload }: { payload: Apl02Payload; setPayload:
   const [dirty, setDirty] = useState(false);
   const [menyimpan, setMenyimpan] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
-  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [errors, setErrors] = useState<Record<string, string>>(() => payload.dokumen.kekurangan ?? {});
   const [prosesBerkas, setProsesBerkas] = useState<string | null>(null); // key baris
   const [dialogTtd, setDialogTtd] = useState(false);
   const [versiTtd, setVersiTtd] = useState(0);
@@ -318,6 +402,9 @@ function Apl02Form({ payload, setPayload }: { payload: Apl02Payload; setPayload:
   const [prosesReview, setProsesReview] = useState(false);
 
   const editable = isEditing && bisaUbah;
+  // Super admin hanya dapat mengoreksi pilihan K/BK; bukti (berkas/tautan) & tanda tangan tetap milik asesi.
+  const bisaKoreksi = !!meta.koreksi?.bisa;
+  const editableKompeten = isEditing && (bisaUbah || bisaKoreksi);
 
   // Peringatan sebelum meninggalkan halaman bila ada perubahan belum disimpan.
   useEffect(() => {
@@ -333,6 +420,8 @@ function Apl02Form({ payload, setPayload }: { payload: Apl02Payload; setPayload:
       toast.info("Jawaban berubah, silakan tanda tangani ulang.");
     }
     await setPayload(res);
+    // Bagian yang belum lengkap (dari server) langsung ditandai merah di form.
+    setErrors(res.dokumen.kekurangan ?? {});
     if (opsi.reset) {
       setJawaban(dariPayload(res));
       setDirty(false);
@@ -353,6 +442,9 @@ function Apl02Form({ payload, setPayload }: { payload: Apl02Payload; setPayload:
   const updateLink = (elemenId: number, key: string, link: string) =>
     ubahElemen(elemenId, { bukti: jawaban[elemenId].bukti.map((b) => (b.key === key ? { ...b, link } : b)) });
 
+  const updateLampiran = (elemenId: number, key: string, lampiranId: number | null) =>
+    ubahElemen(elemenId, { bukti: jawaban[elemenId].bukti.map((b) => (b.key === key ? { ...b, lampiranId } : b)) });
+
   const addBukti = (elemenId: number) => {
     if (jawaban[elemenId].bukti.length >= payload.batas.maks_bukti_per_elemen) return;
     ubahElemen(elemenId, { bukti: [...jawaban[elemenId].bukti, barisKosong()] });
@@ -372,14 +464,34 @@ function Apl02Form({ payload, setPayload }: { payload: Apl02Payload; setPayload:
 
   const handleUbah = () => setIsEditing(true);
 
+  const koreksi = useKoreksiAdmin<Apl02Payload>({
+    meta,
+    slug: SLUG,
+    body: () => keBody(jawaban),
+    terima: (res) => terima(res, { reset: true }),
+    setErrors,
+    onTersimpan: () => setIsEditing(false),
+  });
+
+  const batalKoreksi = () => {
+    setJawaban(dariPayload(payload));
+    setIsEditing(false);
+    setDirty(false);
+    setErrors({});
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!isEditing) return;
+    if (bisaKoreksi) {
+      if (dirty) koreksi.setDialog(true);
+      else toast.info("Belum ada isian yang diubah.");
+      return;
+    }
     setMenyimpan(true);
     try {
       await simpanJawaban();
       setIsEditing(false);
-      setErrors({});
       setSavedSuccess(true);
       setTimeout(() => setSavedSuccess(false), 3000);
     } catch (err) {
@@ -408,9 +520,12 @@ function Apl02Form({ payload, setPayload }: { payload: Apl02Payload; setPayload:
       // ikut tersimpan, lalu berkas ditempelkan ke baris itu.
       if (dirty) {
         const res = await simpanJawaban();
-        if (!buktiId && baris.link.trim()) {
+        if (!buktiId && (baris.link.trim() || baris.lampiranId)) {
           const elemen = res.unit_kompetensi.flatMap((u) => u.elemen).find((x) => x.id === elemenId);
-          buktiId = [...(elemen?.jawaban.bukti ?? [])].reverse().find((b) => b.link === baris.link.trim())?.id ?? null;
+          buktiId =
+            [...(elemen?.jawaban.bukti ?? [])]
+              .reverse()
+              .find((b) => (b.link ?? "") === baris.link.trim() && (b.lampiran?.id ?? null) === baris.lampiranId)?.id ?? null;
         }
       }
       await terima(await mukDokumen.unggahBuktiApl02<Apl02Payload>(penilaianId, elemenId, file, buktiId), { reset: true });
@@ -432,6 +547,23 @@ function Apl02Form({ payload, setPayload }: { payload: Apl02Payload; setPayload:
       toast.error(pesanError(err, "Gagal menghapus berkas."));
     } finally {
       setProsesBerkas(null);
+    }
+  };
+
+  /** Buka lampiran FR.APL.01: berkas (blob, tab baru) atau link. */
+  const lihatLampiran = async (lampiran: Apl01BuktiRelevan) => {
+    if (!lampiran.file && lampiran.link) {
+      window.open(lampiran.link, "_blank", "noopener,noreferrer");
+      return;
+    }
+    const tab = window.open("", "_blank");
+    try {
+      const url = URL.createObjectURL(await mukDokumen.berkasRelevanApl01(penilaianId, lampiran.id));
+      if (tab) tab.location.href = url;
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } catch (err) {
+      tab?.close();
+      toast.error(pesanError(err, "Lampiran tidak dapat dibuka."));
     }
   };
 
@@ -493,6 +625,12 @@ function Apl02Form({ payload, setPayload }: { payload: Apl02Payload; setPayload:
   };
 
   const siapKirim = meta.tanda_tangan.asesi.ada && payload.progres.terisi === payload.progres.total && !dirty;
+
+  // Ringkasan kekurangan: "jawaban" (jumlah) sudah terwakili oleh butir per elemen.
+  const kekurangan = Object.fromEntries(Object.entries(meta.kekurangan ?? {}).filter(([k]) => k !== "jawaban"));
+  const labelElemen = new Map<string, string>(
+    payload.unit_kompetensi.flatMap((u, uIdx) => u.elemen.map((e) => [`jawaban.${e.id}`, `Unit ${uIdx + 1} · Elemen ${e.nomor}`] as const)),
+  );
   const rekomendasi = bisaReview ? pilihan : peninjau.rekomendasi;
   const siapReview =
     pilihan === "dapat_dilanjutkan" ? !!ttdAsesor : pilihan === "tidak_dapat_dilanjutkan" ? catatanReview.trim() !== "" : false;
@@ -533,15 +671,19 @@ function Apl02Form({ payload, setPayload }: { payload: Apl02Payload; setPayload:
           </span>
           {meta.submitted_at && <span>· Dikirim {formatTanggal(meta.submitted_at)}</span>}
         </div>
-        <EditSaveControls
-          bisaUbah={bisaUbah}
-          isEditing={isEditing}
-          savedSuccess={savedSuccess}
-          menyimpan={menyimpan}
-          onUbah={handleUbah}
-          onKirim={() => setKonfirmasi(true)}
-          siapKirim={siapKirim}
-        />
+        {bisaKoreksi ? (
+          <KoreksiTombol isEditing={isEditing} onKoreksi={handleUbah} onBatal={batalKoreksi} proses={koreksi.proses} />
+        ) : (
+          <EditSaveControls
+            bisaUbah={bisaUbah}
+            isEditing={isEditing}
+            savedSuccess={savedSuccess}
+            menyimpan={menyimpan}
+            onUbah={handleUbah}
+            onKirim={() => setKonfirmasi(true)}
+            siapKirim={siapKirim}
+          />
+        )}
       </div>
 
       {meta.review && bisaReview && (
@@ -577,6 +719,16 @@ function Apl02Form({ payload, setPayload }: { payload: Apl02Payload; setPayload:
         <p className="text-sm font-semibold text-red-600">
           Dikembalikan asesor untuk revisi. Perbaiki jawaban sesuai catatan, tanda tangani ulang, lalu kirim kembali.
         </p>
+      )}
+
+      <KoreksiInfo meta={meta} isEditing={isEditing} />
+      {bisaKoreksi && <AlasanKoreksiDialog k={koreksi} nama="FR.APL.02" />}
+      {bisaUbah && !isEditing && !dirty && (
+        <KekuranganKirim
+          kekurangan={kekurangan}
+          label={(k) => labelElemen.get(k) ?? (k === "tanda_tangan" ? "Tanda tangan asesi" : undefined)}
+          cari={(k) => (k.startsWith("jawaban.") ? document.querySelector(`[data-elemen="${k.split(".")[1]}"]`) : null)}
+        />
       )}
 
       {peninjau.catatan && (
@@ -718,7 +870,7 @@ function Apl02Form({ payload, setPayload }: { payload: Apl02Payload; setPayload:
                             type="checkbox"
                             aria-label={`Elemen ${elemen.nomor}: Kompeten`}
                             checked={j.kompeten === "K"}
-                            disabled={!editable}
+                            disabled={!editableKompeten}
                             onChange={(e) => ubahElemen(elemen.id, { kompeten: e.target.checked ? "K" : null })}
                             className={checkboxClass}
                           />
@@ -728,7 +880,7 @@ function Apl02Form({ payload, setPayload }: { payload: Apl02Payload; setPayload:
                             type="checkbox"
                             aria-label={`Elemen ${elemen.nomor}: Belum kompeten`}
                             checked={j.kompeten === "BK"}
-                            disabled={!editable}
+                            disabled={!editableKompeten}
                             onChange={(e) => ubahElemen(elemen.id, { kompeten: e.target.checked ? "BK" : null })}
                             className={checkboxClass}
                           />
@@ -767,7 +919,7 @@ function Apl02Form({ payload, setPayload }: { payload: Apl02Payload; setPayload:
                                     ) : (
                                       <span className="flex-1 text-xs text-gray-400">Tidak ada link</span>
                                     )}
-                                    {editable && (j.bukti.length > 1 || bukti.id || bukti.link) && (
+                                    {editable && (j.bukti.length > 1 || bukti.id || bukti.link || bukti.lampiranId) && (
                                       <button
                                         type="button"
                                         aria-label="Hapus baris bukti"
@@ -778,6 +930,16 @@ function Apl02Form({ payload, setPayload }: { payload: Apl02Payload; setPayload:
                                       </button>
                                     )}
                                   </div>
+                                  <PilihLampiranApl01
+                                    label={`Elemen ${elemen.nomor}: lampiran FR.APL.01 bukti ${bIdx + 1}`}
+                                    pilihan={payload.lampiran_apl01}
+                                    dipilih={bukti.lampiranId}
+                                    // Satu lampiran cukup sekali per elemen.
+                                    dipakaiBarisLain={j.bukti.filter((b) => b.key !== bukti.key).map((b) => b.lampiranId)}
+                                    editable={editable}
+                                    onPilih={(id) => updateLampiran(elemen.id, bukti.key, id)}
+                                    onLihat={lihatLampiran}
+                                  />
                                   <div className="pl-7">
                                     <BerkasBukti
                                       file={bukti.file}
@@ -938,15 +1100,19 @@ function Apl02Form({ payload, setPayload }: { payload: Apl02Payload; setPayload:
       </div>
 
       <div className="flex justify-end">
-        <EditSaveControls
-          bisaUbah={bisaUbah}
-          isEditing={isEditing}
-          savedSuccess={savedSuccess}
-          menyimpan={menyimpan}
-          onUbah={handleUbah}
-          onKirim={() => setKonfirmasi(true)}
-          siapKirim={siapKirim}
-        />
+        {bisaKoreksi ? (
+          <KoreksiTombol isEditing={isEditing} onKoreksi={handleUbah} onBatal={batalKoreksi} proses={koreksi.proses} />
+        ) : (
+          <EditSaveControls
+            bisaUbah={bisaUbah}
+            isEditing={isEditing}
+            savedSuccess={savedSuccess}
+            menyimpan={menyimpan}
+            onUbah={handleUbah}
+            onKirim={() => setKonfirmasi(true)}
+            siapKirim={siapKirim}
+          />
+        )}
       </div>
 
       <SignatureDialog

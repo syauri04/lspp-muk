@@ -38,6 +38,7 @@ const PANDUAN_ASESOR = [
 const keBody = (isian: Ia04bIsian) => ({
   tuk: isian.tuk,
   tanggal: isian.tanggal,
+  judul_kegiatan: isian.judul_kegiatan,
   jawaban: isian.jawaban,
   tambahan: isian.tambahan,
   rekomendasi_teks: isian.rekomendasi_teks,
@@ -133,6 +134,25 @@ function Ia04bForm({
             editable={editable}
             errors={errors}
           >
+            <tr>
+              <td colSpan={2} className="px-4 py-3 border border-gray-200 font-semibold text-gray-600">
+                Judul Kegiatan Terstruktur
+              </td>
+              <td className="px-2 py-3 border border-gray-200 text-center text-gray-400">:</td>
+              <td className="px-3 py-2 border border-gray-200" data-error="isian.judul_kegiatan">
+                <input
+                  type="text"
+                  aria-label="Judul kegiatan terstruktur"
+                  value={isian.judul_kegiatan ?? ""}
+                  onChange={(e) => ubah((p) => ({ ...p, judul_kegiatan: e.target.value || null }), "isian.judul_kegiatan")}
+                  disabled={!editable}
+                  maxLength={500}
+                  placeholder="Contoh: Presentasi Rencana Kerja Proyek"
+                  className={inputClass}
+                />
+                <PesanError kunci="isian.judul_kegiatan" errors={errors} />
+              </td>
+            </tr>
             <BarisTanggal tanggal={isian.tanggal} onUbah={(v) => ubah((p) => ({ ...p, tanggal: v }), "isian.tanggal")} editable={editable} errors={errors} />
           </AkHeader>
           <p className="text-xs italic text-gray-500 px-1">*coret yang tidak perlu</p>

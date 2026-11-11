@@ -1,4 +1,5 @@
-export type MukRole = "asesi" | "asesor";
+/** "admin" = super admin CMS (baca & cetak dokumen), masuk lewat tautan sekali pakai dari CMS. */
+export type MukRole = "asesi" | "asesor" | "admin";
 
 export interface User {
   id: number;
@@ -28,4 +29,5 @@ export interface LoginResponse {
 export const ROLE_LABEL: Record<MukRole, string> = {
   asesi: "Asesi",
   asesor: "Asesor",
+  admin: "Admin LSP",
 };

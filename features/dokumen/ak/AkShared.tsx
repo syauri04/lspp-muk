@@ -17,6 +17,8 @@ import { formatTanggal } from "@/lib/format";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { SignatureDialog } from "@/components/dokumen/SignatureDialog";
 import { SignatureImage } from "@/components/dokumen/SignatureImage";
+import { KekuranganKirim } from "@/components/dokumen/KekuranganKirim";
+import { AlasanKoreksiDialog, KoreksiInfo, KoreksiTombol, useKoreksiAdmin } from "@/components/dokumen/KoreksiAdmin";
 import { inputClass } from "@/features/dokumen/mapa/MapaShared";
 import type { MukRole } from "@/types/auth";
 import type { AkInfo, DokumenPayload, JenisTuk, Opsi } from "@/types/dokumen";
@@ -44,7 +46,9 @@ export function useAkForm<I, P extends DokumenPayload & { isian: I }>({
   const { mutate } = useSWRConfig();
   const meta = payload.dokumen;
   const penilaianId = meta.penilaian_id;
-  const bisaUbah = meta.dapat_diubah;
+  // Super admin dapat mengoreksi dokumen terkirim (jalur simpan terpisah, lihat useKoreksiAdmin).
+  const bisaKoreksi = !!meta.koreksi?.bisa;
+  const bisaUbah = meta.dapat_diubah || bisaKoreksi;
   const bisaSetujui = !!meta.persetujuan?.bisa;
 
   const [isian, setIsian] = useState<I>(payload.isian);
@@ -52,7 +56,7 @@ export function useAkForm<I, P extends DokumenPayload & { isian: I }>({
   const [dirty, setDirty] = useState(false);
   const [menyimpan, setMenyimpan] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
-  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [errors, setErrors] = useState<Record<string, string>>(() => payload.dokumen.kekurangan ?? {});
   const [versiTtd, setVersiTtd] = useState(0);
   const [dialogTtd, setDialogTtd] = useState(false);
   const [konfirmasi, setKonfirmasi] = useState<"kirim" | "tarik" | "setujui" | null>(null);
@@ -88,19 +92,44 @@ export function useAkForm<I, P extends DokumenPayload & { isian: I }>({
       toast.info("Isi dokumen berubah, silakan tanda tangani ulang.");
     }
     await setPayload(res);
+    // Bagian yang belum lengkap (dari server) langsung ditandai merah di form.
+    setErrors(res.dokumen.kekurangan ?? {});
     setIsian(res.isian);
     setDirty(false);
     if (statusBerubah) void mutate(swrKey.penilaian(penilaianId));
   };
 
+  const koreksi = useKoreksiAdmin<P>({
+    meta,
+    slug,
+    body: () => ({ isian: keBody ? keBody(isian) : isian }),
+    terima,
+    setErrors,
+    onTersimpan: () => setIsEditing(false),
+  });
+
+  const batalKoreksi = () => {
+    setIsian(payload.isian);
+    setIsEditing(false);
+    setDirty(false);
+    setErrors({});
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!isEditing) return;
+    if (bisaKoreksi) {
+      if (!dirty) {
+        toast.info("Belum ada isian yang diubah.");
+        return;
+      }
+      koreksi.setDialog(true);
+      return;
+    }
     setMenyimpan(true);
     try {
       await terima(await mukDokumen.simpan<P, { isian: unknown }>(penilaianId, slug, { isian: keBody ? keBody(isian) : isian }));
       setIsEditing(false);
-      setErrors({});
       setSavedSuccess(true);
       setTimeout(() => setSavedSuccess(false), 3000);
     } catch (err) {
@@ -175,6 +204,9 @@ export function useAkForm<I, P extends DokumenPayload & { isian: I }>({
     peran,
     bisaUbah,
     bisaSetujui,
+    bisaKoreksi,
+    koreksi,
+    batalKoreksi,
     isian,
     ubah,
     editable: isEditing && bisaUbah,
@@ -211,6 +243,10 @@ const tombolUtama =
 export function AkControls({ f }: { f: AkForm }) {
   const { meta } = f;
   const siapKirim = meta.tanda_tangan.asesor.ada && !f.dirty;
+
+  if (f.bisaKoreksi) {
+    return <KoreksiTombol isEditing={f.isEditing} onKoreksi={() => f.setIsEditing(true)} onBatal={f.batalKoreksi} proses={f.koreksi.proses} />;
+  }
 
   if (f.bisaSetujui) {
     return (
@@ -290,6 +326,9 @@ export function AkControls({ f }: { f: AkForm }) {
 export function AkBanner({ f }: { f: AkForm }) {
   const { meta, peran } = f;
 
+  // Super admin: hanya keterangan koreksi (bukan petunjuk pengisian asesor/asesi).
+  if (peran === "admin") return <KoreksiInfo meta={meta} isEditing={f.isEditing} />;
+
   if (meta.status === "selesai") {
     return (
       <p className="text-sm text-[#5A7A22] font-semibold bg-[#F2F5E9] border border-[#8AA53C]/40 rounded-lg p-3">
@@ -310,10 +349,13 @@ export function AkBanner({ f }: { f: AkForm }) {
   }
   if (f.bisaUbah) {
     return (
-      <p className="text-sm text-gray-600 bg-gray-50 border border-gray-200 rounded-lg p-3">
-        Klik <strong>Ubah</strong> untuk mengisi, <strong>Simpan</strong>, tanda tangani kotak <strong>Tanda Tangan Asesor</strong>, lalu{" "}
-        {f.tanpaPersetujuan ? <strong>Selesaikan</strong> : <><strong>Kirim ke Asesi</strong> untuk disetujui</>}.
-      </p>
+      <>
+        <p className="text-sm text-gray-600 bg-gray-50 border border-gray-200 rounded-lg p-3">
+          Klik <strong>Ubah</strong> untuk mengisi, <strong>Simpan</strong>, tanda tangani kotak <strong>Tanda Tangan Asesor</strong>, lalu{" "}
+          {f.tanpaPersetujuan ? <strong>Selesaikan</strong> : <><strong>Kirim ke Asesi</strong> untuk disetujui</>}.
+        </p>
+        {!f.isEditing && !f.dirty && <KekuranganKirim kekurangan={meta.kekurangan} />}
+      </>
     );
   }
   return null;
@@ -383,6 +425,7 @@ export function AkDialogs({ f }: { f: AkForm }) {
         title={f.peran === "asesor" ? "Tanda Tangan Asesor" : "Tanda Tangan Asesi"}
         onSimpan={f.simpanTtd}
       />
+      {f.bisaKoreksi && <AlasanKoreksiDialog k={f.koreksi} nama={f.nama} />}
       <ConfirmDialog
         open={k !== null}
         onOpenChange={(o) => !o && f.setKonfirmasi(null)}

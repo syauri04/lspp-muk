@@ -1,5 +1,7 @@
 "use client";
 
+import { KekuranganKirim } from "@/components/dokumen/KekuranganKirim";
+import { AlasanKoreksiDialog, KoreksiInfo, KoreksiTombol, useKoreksiAdmin } from "@/components/dokumen/KoreksiAdmin";
 /*
  * FR.IA.06A - Pertanyaan Tertulis Esai (semua metode).
  * Tampilan & style mengikuti mockup app/dashboard/fr/ia-06a; data & aksi disambungkan ke API.
@@ -25,7 +27,8 @@ import { KepalaIa06 } from "@/features/dokumen/ia06/Ia06Shared";
 
 const SLUG = "ia-06a";
 
-type Mode = "siapkan" | "jawab" | "lihat";
+/** koreksi = super admin mengoreksi jawaban asesi pada dokumen terkirim. */
+type Mode = "siapkan" | "jawab" | "koreksi" | "lihat";
 
 export function Ia06aPage({ penilaian, role }: DokumenPageProps) {
   const { data, error, isLoading, mutate } = useSWR(
@@ -74,7 +77,13 @@ function Ia06aForm({
   const { mutate } = useSWRConfig();
   const meta = payload.dokumen;
   const penilaianId = meta.penilaian_id;
-  const mode: Mode = peran === "asesor" && meta.dinilai?.bisa_siapkan ? "siapkan" : peran === "asesi" && meta.dapat_diubah ? "jawab" : "lihat";
+  const mode: Mode = meta.koreksi?.bisa
+    ? "koreksi"
+    : peran === "asesor" && meta.dinilai?.bisa_siapkan
+      ? "siapkan"
+      : peran === "asesi" && meta.dapat_diubah
+        ? "jawab"
+        : "lihat";
 
   const [header, setHeader] = useState<Ia06Header>({
     tuk: payload.persiapan.tuk,
@@ -86,7 +95,7 @@ function Ia06aForm({
   const [dirty, setDirty] = useState(false);
   const [menyimpan, setMenyimpan] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
-  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [errors, setErrors] = useState<Record<string, string>>(() => payload.dokumen.kekurangan ?? {});
   const [konfirmasi, setKonfirmasi] = useState<"buka" | "kirim" | null>(null);
   const [proses, setProses] = useState(false);
   const editable = isEditing && mode !== "lihat";
@@ -109,15 +118,38 @@ function Ia06aForm({
 
   const terima = async (res: Ia06aPayload) => {
     await setPayload(res);
+    // Bagian yang belum lengkap (dari server) langsung ditandai merah di form.
+    setErrors(res.dokumen.kekurangan ?? {});
     setHeader({ tuk: res.persiapan.tuk, tanggal: res.persiapan.tanggal, waktu: res.persiapan.waktu });
     setJawaban(res.isian.jawaban);
     setDirty(false);
     void mutate(swrKey.penilaian(penilaianId));
   };
 
+  const koreksi = useKoreksiAdmin<Ia06aPayload>({
+    meta,
+    slug: SLUG,
+    body: () => ({ isian: { jawaban } }),
+    terima,
+    setErrors,
+    onTersimpan: () => setIsEditing(false),
+  });
+
+  const batalKoreksi = () => {
+    setJawaban(payload.isian.jawaban);
+    setIsEditing(false);
+    setDirty(false);
+    setErrors({});
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!isEditing) return;
+    if (mode === "koreksi") {
+      if (dirty) koreksi.setDialog(true);
+      else toast.info("Belum ada isian yang diubah.");
+      return;
+    }
     setMenyimpan(true);
     try {
       const res =
@@ -126,7 +158,6 @@ function Ia06aForm({
           : await mukDokumen.simpan<Ia06aPayload, unknown>(penilaianId, SLUG, { isian: { jawaban } });
       await terima(res);
       setIsEditing(false);
-      setErrors({});
       setSavedSuccess(true);
       setTimeout(() => setSavedSuccess(false), 3000);
     } catch (err) {
@@ -172,7 +203,9 @@ function Ia06aForm({
         : null;
 
   const kontrol =
-    mode === "lihat" ? null : (
+    mode === "lihat" ? null : mode === "koreksi" ? (
+      <KoreksiTombol isEditing={isEditing} onKoreksi={() => setIsEditing(true)} onBatal={batalKoreksi} proses={koreksi.proses} />
+    ) : (
       <div className="flex items-center gap-2.5 shrink-0 flex-wrap justify-end">
         {savedSuccess && (
           <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#F2F5E9] text-[#5A7A22] text-xs font-semibold border border-[#8AA53C]/30 animate-in fade-in">
@@ -217,7 +250,12 @@ function Ia06aForm({
   const kelasInfo = "text-sm text-gray-600 bg-gray-50 border border-gray-200 rounded-lg p-3";
   const kelasAksi = "text-sm text-[#5A7A22] bg-[#F2F5E9] border border-[#8AA53C]/40 rounded-lg p-3";
   const banner =
-    meta.status === "selesai" ? (
+    mode === "koreksi" || meta.koreksi ? (
+      <>
+        <KoreksiInfo meta={meta} isEditing={isEditing} />
+        {mode === "koreksi" && <AlasanKoreksiDialog k={koreksi} nama="FR.IA.06A" />}
+      </>
+    ) : meta.status === "selesai" ? (
       <p className={`${kelasAksi} font-semibold`}>
         Jawaban sudah dikirim.{peran === "asesor" ? " Nilai jawaban asesi di FR.IA.06C." : " Menunggu penilaian asesor di FR.IA.06C."}
       </p>
@@ -243,6 +281,8 @@ function Ia06aForm({
         </div>
         {kontrol}
       </div>
+
+      {meta.dapat_diubah && !isEditing && !dirty && <KekuranganKirim kekurangan={meta.kekurangan} />}
 
       {banner}
       <PesanError kunci="persiapan.soal" errors={errors} />
@@ -285,7 +325,7 @@ function Ia06aForm({
                         });
                         tandai(`isian.jawaban.${i}`);
                       }}
-                      isEditing={editable && mode === "jawab"}
+                      isEditing={editable && (mode === "jawab" || mode === "koreksi")}
                     />
                   )}
                   <PesanError kunci={`isian.jawaban.${i}`} errors={errors} />

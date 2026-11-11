@@ -39,7 +39,7 @@ export function PenilaianHeader({ penilaian: p, role }: { penilaian: Penilaian; 
         <div className="flex gap-2.5">
           <UserRound size={16} className="text-[#8AA53C] mt-0.5 shrink-0" />
           <div>
-            {role === "asesor" ? (
+            {role === "asesor" || role === "admin" ? (
               <>
                 <dt className="text-xs text-gray-400">Asesi</dt>
                 <dd className="font-medium text-gray-700">{p.asesi.nama}</dd>

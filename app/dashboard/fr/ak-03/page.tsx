@@ -92,6 +92,7 @@ const RAW_KOMPONEN: string[] = [
   "Saya mendapatkan penjelasan yang memadai mengenai keputusan asesmen",
   "Asesor memberikan umpan balik yang mendukung setelah asesmen serta tindak lanjutnya",
   "Asesor bersama saya mempelajari semua dokumen asesmen  serta menandatanganinya",
+  "Saya mendapatkan jaminan kerahasiaan hasil asesmen serta penjelasan penanganan dokumen asesmen",
   "Asesor menggunakan keterampilan komunikasi yang efektif selama asesmen",
 ];
 

@@ -1,5 +1,7 @@
 "use client";
 
+import { KekuranganKirim } from "@/components/dokumen/KekuranganKirim";
+import { AlasanKoreksiDialog, KoreksiInfo, KoreksiTombol } from "@/components/dokumen/KoreksiAdmin";
 /*
  * FR.MAPA.02 - Peta Instrumen Asesmen (diisi asesor).
  * Tampilan & style mengikuti mockup app/dashboard/fr/mapa-02; daftar instrumen sesuai
@@ -101,7 +103,9 @@ function Mapa02Form({ payload, setPayload }: { payload: Mapa02Payload; setPayloa
   const penyusun = payload.penyusun.filter((p) => p.peran === "penyusun");
   const validator = payload.penyusun.filter((p) => p.peran === "validator");
 
-  const kontrol = (
+  const kontrol = f.bisaKoreksi ? (
+    <KoreksiTombol isEditing={f.isEditing} onKoreksi={() => f.setIsEditing(true)} onBatal={f.batalKoreksi} proses={f.koreksi.proses} />
+  ) : (
     <MapaControls
       bisaUbah={f.bisaUbah}
       isEditing={f.isEditing}
@@ -123,6 +127,10 @@ function Mapa02Form({ payload, setPayload }: { payload: Mapa02Payload; setPayloa
         </div>
         {kontrol}
       </div>
+
+      <KoreksiInfo meta={meta} isEditing={f.isEditing} />
+      {f.bisaKoreksi && <AlasanKoreksiDialog k={f.koreksi} nama={f.nama} />}
+      {f.bisaUbah && !f.isEditing && !f.dirty && <KekuranganKirim kekurangan={meta.kekurangan} />}
 
       {meta.status === "selesai" && (
         <p className="text-sm text-[#5A7A22] font-semibold bg-[#F2F5E9] border border-[#8AA53C]/40 rounded-lg p-3">

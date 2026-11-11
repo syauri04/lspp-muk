@@ -24,8 +24,15 @@ export interface DokumenMeta {
   persetujuan?: { bisa: boolean; alasan: string | null };
   /** Pola disiapkan asesor -> dijawab asesi -> dinilai asesor (mis. FR.IA.03). */
   dinilai?: { dibuka: boolean; bisa_siapkan: boolean; bisa_nilai: boolean };
+  /**
+   * Hanya untuk pengisi pada draft: bagian yang belum lengkap sebelum Kirim ([field] => pesan),
+   * dari aturan yang sama dengan submit. {} = siap dikirim.
+   */
+  kekurangan?: Record<string, string>;
   /** Pengisi boleh menarik kembali dokumen yang menunggu persetujuan. */
   dapat_ditarik: boolean;
+  /** Hanya untuk super admin: boleh mengoreksi isi dokumen terkirim? (alasan bila tidak) */
+  koreksi?: { bisa: boolean; alasan: string | null };
   tanda_tangan: Record<PihakTtd, { ada: boolean; tanggal: string | null }>;
   hasil_rekomendasi_admin: "diterima" | "ditolak" | null;
   catatan_admin: string | null;
@@ -134,6 +141,8 @@ export type Kompeten = "K" | "BK";
 export interface Apl02Bukti {
   id: number;
   link: string | null;
+  /** Rujukan "Lampiran bukti yang relevan" FR.APL.01 (bagian 3), bila dipilih. */
+  lampiran: Apl01BuktiRelevan | null;
   file: { nama: string; mime: string; ukuran_kb: number } | null;
 }
 
@@ -165,10 +174,16 @@ export interface Apl02Payload extends DokumenPayload {
     catatan: string | null;
   };
   batas: { maks_bukti_per_elemen: number; mimes: string[]; max_kb: number };
+  /** Pilihan dropdown "Pilih dari Lampiran FR.APL.01" (hanya lampiran yang berisi berkas/link; bisa kosong). */
+  lampiran_apl01: Apl01BuktiRelevan[];
 }
 
 export interface Apl02Patch {
-  jawaban: { elemen_id: number; kompeten: Kompeten | null; bukti: { id: number | null; link: string | null }[] }[];
+  jawaban: {
+    elemen_id: number;
+    kompeten: Kompeten | null;
+    bukti: { id: number | null; link: string | null; lampiran_id: number | null }[];
+  }[];
 }
 
 /* ------------------------------ FR.MAPA.01 / 02 ------------------------------ */
@@ -564,6 +579,7 @@ export interface Ia04bAspek {
 export interface Ia04bIsian {
   tuk: JenisTuk | null;
   tanggal: string | null;
+  judul_kegiatan: string | null;
   /** Aspek dari template (hanya tampil, tidak dikirim balik). */
   aspek: Ia04bAspek[];
   /** Kesesuaian awal dari template, dapat diubah asesor. */

@@ -13,6 +13,7 @@ import { Check, CheckCircle2, Loader2, Pencil, Plus, Save } from "lucide-react";
 import { mukDokumen, swrKey } from "@/lib/api/muk";
 import { fieldErrors, pesanError, statusError } from "@/lib/api/axios";
 import { formatTanggal } from "@/lib/format";
+import { useKoreksiAdmin } from "@/components/dokumen/KoreksiAdmin";
 import type { DokumenPayload, MapaPenandatangan, MapaSkema } from "@/types/dokumen";
 
 export const inputClass =
@@ -227,14 +228,16 @@ export function useMapaForm<I, P extends DokumenPayload & { isian: I }>({
   const { mutate } = useSWRConfig();
   const meta = payload.dokumen;
   const penilaianId = meta.penilaian_id;
-  const bisaUbah = meta.dapat_diubah;
+  // Super admin dapat mengoreksi dokumen terkirim (jalur simpan terpisah, lihat useKoreksiAdmin).
+  const bisaKoreksi = !!meta.koreksi?.bisa;
+  const bisaUbah = meta.dapat_diubah || bisaKoreksi;
 
   const [isian, setIsian] = useState<I>(payload.isian);
   const [isEditing, setIsEditing] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [menyimpan, setMenyimpan] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
-  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [errors, setErrors] = useState<Record<string, string>>(() => payload.dokumen.kekurangan ?? {});
   const [konfirmasi, setKonfirmasi] = useState(false);
   const [prosesSelesai, setProsesSelesai] = useState(false);
 
@@ -260,19 +263,44 @@ export function useMapaForm<I, P extends DokumenPayload & { isian: I }>({
   const terima = async (res: P) => {
     const statusBerubah = res.dokumen.status !== meta.status;
     await setPayload(res);
+    // Bagian yang belum lengkap (dari server) langsung ditandai merah di form.
+    setErrors(res.dokumen.kekurangan ?? {});
     setIsian(res.isian);
     setDirty(false);
     if (statusBerubah) void mutate(swrKey.penilaian(penilaianId));
   };
 
+  const koreksi = useKoreksiAdmin<P>({
+    meta,
+    slug,
+    body: () => ({ isian }),
+    terima,
+    setErrors,
+    onTersimpan: () => setIsEditing(false),
+  });
+
+  const batalKoreksi = () => {
+    setIsian(payload.isian);
+    setIsEditing(false);
+    setDirty(false);
+    setErrors({});
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!isEditing) return;
+    if (bisaKoreksi) {
+      if (!dirty) {
+        toast.info("Belum ada isian yang diubah.");
+        return;
+      }
+      koreksi.setDialog(true);
+      return;
+    }
     setMenyimpan(true);
     try {
       await terima(await mukDokumen.simpan<P, { isian: I }>(penilaianId, slug, { isian }));
       setIsEditing(false);
-      setErrors({});
       setSavedSuccess(true);
       setTimeout(() => setSavedSuccess(false), 3000);
     } catch (err) {
@@ -311,6 +339,10 @@ export function useMapaForm<I, P extends DokumenPayload & { isian: I }>({
     meta,
     penilaianId,
     bisaUbah,
+    bisaKoreksi,
+    koreksi,
+    batalKoreksi,
+    nama,
     isian,
     ubah,
     editable: isEditing && bisaUbah,

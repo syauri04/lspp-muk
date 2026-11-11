@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ChevronDown, User, Settings, LogOut, Shield } from "lucide-react";
+import { ChevronDown, User, Settings, LogOut, Shield, KeyRound } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { ROLE_LABEL } from "@/types/auth";
 
@@ -92,6 +92,16 @@ export function UserDropdown() {
               <Settings size={14} className="text-gray-400" />
               <span>Pengaturan</span>
             </Link>
+            {user?.role === "asesor" && (
+              <Link
+                href="/dashboard/settings"
+                onClick={() => setIsOpen(false)}
+                className="flex items-center gap-2.5 px-4 py-2 text-xs text-gray-700 hover:bg-gray-50 transition-colors"
+              >
+                <KeyRound size={14} className="text-gray-400" />
+                <span>Ubah Password</span>
+              </Link>
+            )}
           </div>
 
           <div className="border-t border-gray-100 pt-1">

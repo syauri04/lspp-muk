@@ -1,5 +1,7 @@
 "use client";
 
+import { KekuranganKirim } from "@/components/dokumen/KekuranganKirim";
+import { AlasanKoreksiDialog, KoreksiInfo, KoreksiTombol, useKoreksiAdmin } from "@/components/dokumen/KoreksiAdmin";
 /*
  * FR.AK.03 - Umpan Balik dan Catatan Asesmen — diisi ASESI setelah keputusan (FR.AK.02 selesai).
  * Tampilan & style mengikuti mockup app/dashboard/fr/ak-03; data & aksi disambungkan ke API.
@@ -26,11 +28,9 @@ import { BarisRentangTanggal } from "@/features/dokumen/ak/BarisHeader";
 const SLUG = "ak-03";
 
 export function Ak03Page({ penilaian }: DokumenPageProps) {
-  const { data, error, isLoading, mutate } = useSWR(
-    swrKey.dokumen(penilaian.id, SLUG),
-    () => mukDokumen.get<Ak03Payload>(penilaian.id, SLUG),
-    { revalidateOnFocus: false },
-  );
+  const { data, error, isLoading, mutate } = useSWR(swrKey.dokumen(penilaian.id, SLUG), () => mukDokumen.get<Ak03Payload>(penilaian.id, SLUG), {
+    revalidateOnFocus: false,
+  });
 
   if (error) {
     return <ErrorState title="Gagal memuat FR.AK.03" description={pesanError(error)} onRetry={() => mutate()} />;
@@ -43,13 +43,15 @@ export function Ak03Page({ penilaian }: DokumenPageProps) {
 function Ak03Form({ payload, setPayload }: { payload: Ak03Payload; setPayload: (p: Ak03Payload) => Promise<unknown> }) {
   const { mutate } = useSWRConfig();
   const meta = payload.dokumen;
-  const bisaUbah = meta.dapat_diubah;
+  // Super admin dapat mengoreksi dokumen terkirim (lihat useKoreksiAdmin).
+  const bisaKoreksi = !!meta.koreksi?.bisa;
+  const bisaUbah = meta.dapat_diubah || bisaKoreksi;
   const [isian, setIsian] = useState<Ak03Isian>(payload.isian);
   const [isEditing, setIsEditing] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [menyimpan, setMenyimpan] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
-  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [errors, setErrors] = useState<Record<string, string>>(() => payload.dokumen.kekurangan ?? {});
   const [konfirmasi, setKonfirmasi] = useState(false);
   const [proses, setProses] = useState(false);
   const editable = isEditing && bisaUbah;
@@ -62,7 +64,10 @@ function Ak03Form({ payload, setPayload }: { payload: Ak03Payload; setPayload: (
   }, [dirty]);
 
   const ubahKomponen = (i: number, patch: Partial<Ak03Isian["komponen"][number]>) => {
-    setIsian((p) => ({ ...p, komponen: p.komponen.map((k, j) => (j === i ? { ...k, ...patch } : k)) }));
+    setIsian((p) => ({
+      ...p,
+      komponen: p.komponen.map((k, j) => (j === i ? { ...k, ...patch } : k)),
+    }));
     setDirty(true);
     setErrors((e) => {
       const salinan = { ...e };
@@ -71,23 +76,48 @@ function Ak03Form({ payload, setPayload }: { payload: Ak03Payload; setPayload: (
     });
   };
 
-  const setHasil = (i: number, nilai: Exclude<Pencapaian, null>) => ubahKomponen(i, { hasil: isian.komponen[i].hasil === nilai ? null : nilai });
+  const setHasil = (i: number, nilai: Exclude<Pencapaian, null>) =>
+    ubahKomponen(i, {
+      hasil: isian.komponen[i].hasil === nilai ? null : nilai,
+    });
 
   const terima = async (res: Ak03Payload) => {
     await setPayload(res);
+    // Bagian yang belum lengkap (dari server) langsung ditandai merah di form.
+    setErrors(res.dokumen.kekurangan ?? {});
     setIsian(res.isian);
     setDirty(false);
     void mutate(swrKey.penilaian(meta.penilaian_id));
   };
 
+  const koreksi = useKoreksiAdmin<Ak03Payload>({
+    meta,
+    slug: SLUG,
+    body: () => ({ isian }),
+    terima,
+    setErrors,
+    onTersimpan: () => setIsEditing(false),
+  });
+
+  const batalKoreksi = () => {
+    setIsian(payload.isian);
+    setIsEditing(false);
+    setDirty(false);
+    setErrors({});
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!isEditing) return;
+    if (bisaKoreksi) {
+      if (dirty) koreksi.setDialog(true);
+      else toast.info("Belum ada isian yang diubah.");
+      return;
+    }
     setMenyimpan(true);
     try {
       await terima(await mukDokumen.simpan<Ak03Payload, { isian: Ak03Isian }>(meta.penilaian_id, SLUG, { isian }));
       setIsEditing(false);
-      setErrors({});
       setSavedSuccess(true);
       setTimeout(() => setSavedSuccess(false), 3000);
     } catch (err) {
@@ -118,45 +148,49 @@ function Ak03Form({ payload, setPayload }: { payload: Ak03Payload; setPayload: (
     }
   };
 
-  const kontrol = bisaUbah && (
-    <div className="flex items-center gap-2.5 shrink-0 flex-wrap justify-end">
-      {savedSuccess && (
-        <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#F2F5E9] text-[#5A7A22] text-xs font-semibold border border-[#8AA53C]/30 animate-in fade-in">
-          <Check size={14} className="stroke-[2.5]" />
-          Tersimpan
-        </div>
-      )}
-      <button
-        type="button"
-        onClick={() => setIsEditing(true)}
-        disabled={isEditing}
-        className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${
-          isEditing ? "bg-gray-100 text-gray-400 border-gray-200 cursor-default" : "border-[#7E9631] text-[#7E9631] bg-white hover:bg-[#F2F5E9]"
-        }`}
-      >
-        <Pencil size={13} />
-        Ubah
-      </button>
-      <button
-        type="submit"
-        disabled={!isEditing || menyimpan}
-        className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold text-white bg-[#7E9631] hover:bg-[#6C8229] transition-all shadow-xs cursor-pointer disabled:opacity-50 disabled:cursor-default"
-      >
-        {menyimpan ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
-        Simpan
-      </button>
-      {!isEditing && (
+  const kontrol = bisaKoreksi ? (
+    <KoreksiTombol isEditing={isEditing} onKoreksi={() => setIsEditing(true)} onBatal={batalKoreksi} proses={koreksi.proses} />
+  ) : (
+    bisaUbah && (
+      <div className="flex items-center gap-2.5 shrink-0 flex-wrap justify-end">
+        {savedSuccess && (
+          <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#F2F5E9] text-[#5A7A22] text-xs font-semibold border border-[#8AA53C]/30 animate-in fade-in">
+            <Check size={14} className="stroke-[2.5]" />
+            Tersimpan
+          </div>
+        )}
         <button
           type="button"
-          onClick={() => setKonfirmasi(true)}
-          disabled={dirty || proses}
-          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold text-white bg-[#5A7A22] hover:bg-[#4a6619] transition-all shadow-xs cursor-pointer disabled:opacity-50 disabled:cursor-default"
+          onClick={() => setIsEditing(true)}
+          disabled={isEditing}
+          className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${
+            isEditing ? "bg-gray-100 text-gray-400 border-gray-200 cursor-default" : "border-[#7E9631] text-[#7E9631] bg-white hover:bg-[#F2F5E9]"
+          }`}
         >
-          <Send size={13} />
-          Kirim
+          <Pencil size={13} />
+          Ubah
         </button>
-      )}
-    </div>
+        <button
+          type="submit"
+          disabled={!isEditing || menyimpan}
+          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold text-white bg-[#7E9631] hover:bg-[#6C8229] transition-all shadow-xs cursor-pointer disabled:opacity-50 disabled:cursor-default"
+        >
+          {menyimpan ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
+          Simpan
+        </button>
+        {!isEditing && (
+          <button
+            type="button"
+            onClick={() => setKonfirmasi(true)}
+            disabled={dirty || proses}
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold text-white bg-[#5A7A22] hover:bg-[#4a6619] transition-all shadow-xs cursor-pointer disabled:opacity-50 disabled:cursor-default"
+          >
+            <Send size={13} />
+            Kirim
+          </button>
+        )}
+      </div>
+    )
   );
 
   return (
@@ -169,10 +203,16 @@ function Ak03Form({ payload, setPayload }: { payload: Ak03Payload; setPayload: (
         {kontrol}
       </div>
 
+      <KoreksiInfo meta={meta} isEditing={isEditing} />
+      {bisaKoreksi && <AlasanKoreksiDialog k={koreksi} nama="FR.AK.03" />}
+      {meta.dapat_diubah && !isEditing && !dirty && <KekuranganKirim kekurangan={meta.kekurangan} />}
+
       {meta.status === "selesai" ? (
-        <p className="text-sm text-[#5A7A22] font-semibold bg-[#F2F5E9] border border-[#8AA53C]/40 rounded-lg p-3">Umpan balik asesi sudah dikirim.</p>
+        <p className="text-sm text-[#5A7A22] font-semibold bg-[#F2F5E9] border border-[#8AA53C]/40 rounded-lg p-3">
+          Umpan balik asesi sudah dikirim.
+        </p>
       ) : (
-        bisaUbah && (
+        meta.dapat_diubah && (
           <p className="text-sm text-[#5A7A22] bg-[#F2F5E9] border border-[#8AA53C]/40 rounded-lg p-3">
             Klik <strong>Ubah</strong>, pilih Ya/Tidak untuk setiap komponen (tambahkan catatan bila perlu), <strong>Simpan</strong>, lalu{" "}
             <strong>Kirim</strong>.

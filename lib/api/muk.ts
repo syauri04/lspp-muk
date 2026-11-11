@@ -11,11 +11,19 @@ export const mukAuth = {
   login: async (role: MukRole, credentials: LoginCredentials) =>
     (await apiClient.post<LoginResponse>(`/muk/auth/${role}/login`, credentials)).data.data,
 
+  /** Admin LSP: tukar kode sekali pakai dari CMS menjadi sesi baca-saja untuk satu penilaian. */
+  tukarAdmin: async (kode: string) =>
+    (await apiClient.post<{ data: LoginResponse["data"] & { penilaian_id: number } }>("/muk/auth/admin/tukar", { kode })).data.data,
+
   me: async () => (await apiClient.get<ApiResource<User>>("/muk/auth/me")).data.data,
 
   logout: async () => {
     await apiClient.post("/muk/auth/logout");
   },
+
+  /** Asesor mengganti password sendiri; mengembalikan pesan sukses dari server. */
+  ubahPassword: async (body: { current_password: string; password: string; password_confirmation: string }) =>
+    (await apiClient.put<{ message: string }>("/muk/auth/password", body)).data.message,
 };
 
 export interface PenilaianQuery {
@@ -41,6 +49,12 @@ export const mukDokumen = {
 
   simpan: async <T, P>(id: number | string, slug: string, patch: P) =>
     (await apiClient.patch<ApiResource<T>>(swrKey.dokumen(id, slug), patch)).data.data,
+
+  /** Koreksi isi dokumen terkirim oleh super admin (body sama dengan simpan + alasan). */
+  koreksi: async <T>(id: number | string, slug: string, body: object & { alasan: string }) => {
+    const res = (await apiClient.patch<ApiResource<T> & { meta?: { jumlah_perubahan?: number } }>(`${swrKey.dokumen(id, slug)}/koreksi`, body)).data;
+    return { data: res.data, jumlah: res.meta?.jumlah_perubahan ?? 0 };
+  },
 
   tandaTangan: async <T>(id: number | string, slug: string, dataUrl: string) =>
     (await apiClient.post<ApiResource<T>>(`${swrKey.dokumen(id, slug)}/tanda-tangan`, { tanda_tangan: dataUrl })).data.data,

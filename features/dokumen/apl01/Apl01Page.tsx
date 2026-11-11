@@ -19,6 +19,8 @@ import { ErrorState } from "@/components/common/ErrorState";
 import { PageLoader } from "@/components/ui/PageLoader";
 import { SignatureDialog } from "@/components/dokumen/SignatureDialog";
 import { SignatureImage } from "@/components/dokumen/SignatureImage";
+import { KekuranganKirim } from "@/components/dokumen/KekuranganKirim";
+import { AlasanKoreksiDialog, KoreksiInfo, KoreksiTombol, useKoreksiAdmin } from "@/components/dokumen/KoreksiAdmin";
 import type { DokumenPageProps } from "@/features/dokumen/registry";
 import type { Apl01BuktiPersyaratan, Apl01Isian, Apl01Payload, Apl01Patch } from "@/types/dokumen";
 import { LampiranRelevan } from "@/features/dokumen/apl01/LampiranRelevan";
@@ -45,6 +47,24 @@ function SectionDivider() {
 }
 
 /** Pesan error validasi dari API, di bawah baris isian. */
+/** Nama bagian untuk ringkasan kekurangan sebelum Kirim (key dari Apl01Handler::kesalahanSubmit). */
+const LABEL_KEKURANGAN: Record<string, string> = {
+  "isian.pribadi.nama_lengkap": "Nama Lengkap",
+  "isian.pribadi.nik": "No. KTP/NIK/Paspor",
+  "isian.pribadi.tempat_lahir": "Tempat lahir",
+  "isian.pribadi.tanggal_lahir": "Tanggal lahir",
+  "isian.pribadi.jenis_kelamin": "Jenis kelamin",
+  "isian.pribadi.kebangsaan": "Kebangsaan",
+  "isian.pribadi.alamat_rumah": "Alamat Rumah",
+  "isian.pribadi.hp": "HP",
+  "isian.pribadi.email": "E-Mail",
+  "isian.pribadi.kualifikasi_pendidikan": "Kualifikasi Pendidikan",
+  "isian.tujuan_asesmen": "Tujuan asesmen",
+  "isian.tujuan_lainnya": "Tujuan asesmen lainnya",
+  bukti_persyaratan: "Bukti persyaratan dasar",
+  tanda_tangan: "Tanda tangan pemohon",
+};
+
 function ErrorText({ message, indent = true }: { message?: string; indent?: boolean }) {
   if (!message) return null;
   return (
@@ -925,13 +945,16 @@ function Apl01Form({ payload, setPayload }: { payload: Apl01Payload; setPayload:
   const meta = payload.dokumen;
   const penilaianId = meta.penilaian_id;
   const bisaUbah = meta.dapat_diubah;
+  // Super admin dapat mengoreksi isian teks dokumen terkirim (berkas & tanda tangan tetap milik asesi).
+  const bisaKoreksi = !!meta.koreksi?.bisa;
+  const bisaIsi = bisaUbah || bisaKoreksi;
 
   const [isian, setIsian] = useState<Apl01Isian>(payload.isian);
   const [isEditing, setIsEditing] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [menyimpan, setMenyimpan] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
-  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [errors, setErrors] = useState<Record<string, string>>(() => payload.dokumen.kekurangan ?? {});
   const [buktiProses, setBuktiProses] = useState<number | null>(null);
   const [dialogTtd, setDialogTtd] = useState(false);
   const [versiTtd, setVersiTtd] = useState(0);
@@ -976,6 +999,8 @@ function Apl01Form({ payload, setPayload }: { payload: Apl01Payload; setPayload:
       toast.info("Isi dokumen berubah, silakan tanda tangani ulang.");
     }
     await setPayload(res);
+    // Bagian yang belum lengkap (dari server) langsung ditandai merah di form.
+    setErrors(res.dokumen.kekurangan ?? {});
     if (opsi.resetIsian) setIsian(res.isian);
     // Sidebar & ringkasan memakai status dari detail penilaian.
     if (statusBerubah) void mutate(swrKey.penilaian(penilaianId));
@@ -993,16 +1018,39 @@ function Apl01Form({ payload, setPayload }: { payload: Apl01Payload; setPayload:
 
   const handleUbah = () => setIsEditing(true);
 
+  const koreksi = useKoreksiAdmin<Apl01Payload>({
+    meta,
+    slug: SLUG,
+    body: () => ({ isian }),
+    terima: async (res) => {
+      await terima(res, { resetIsian: true });
+      setDirty(false);
+    },
+    setErrors,
+    onTersimpan: () => setIsEditing(false),
+  });
+
+  const batalKoreksi = () => {
+    setIsian(payload.isian);
+    setIsEditing(false);
+    setDirty(false);
+    setErrors({});
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!isEditing) return;
+    if (bisaKoreksi) {
+      if (dirty) koreksi.setDialog(true);
+      else toast.info("Belum ada isian yang diubah.");
+      return;
+    }
     setMenyimpan(true);
     try {
       const res = await mukDokumen.simpan<Apl01Payload, Apl01Patch>(penilaianId, SLUG, { isian });
       await terima(res, { resetIsian: true });
       setDirty(false);
       setIsEditing(false);
-      setErrors({});
       setSavedSuccess(true);
       setTimeout(() => setSavedSuccess(false), 3000);
     } catch (err) {
@@ -1115,7 +1163,20 @@ function Apl01Form({ payload, setPayload }: { payload: Apl01Payload; setPayload:
 
   const adaBerkas = payload.bukti_persyaratan.some((b) => b.file) || payload.bukti_persyaratan.length === 0;
   const siapKirim = meta.tanda_tangan.asesi.ada && adaBerkas && !dirty;
-  const sectionProps: SectionProps = { isian, ubah, isEditing: isEditing && bisaUbah, errors };
+  const sectionProps: SectionProps = { isian, ubah, isEditing: isEditing && bisaIsi, errors };
+  const kontrol = bisaKoreksi ? (
+    <KoreksiTombol isEditing={isEditing} onKoreksi={handleUbah} onBatal={batalKoreksi} proses={koreksi.proses} />
+  ) : (
+    <EditSaveControls
+      bisaUbah={bisaUbah}
+      isEditing={isEditing}
+      savedSuccess={savedSuccess}
+      menyimpan={menyimpan}
+      onUbah={handleUbah}
+      onKirim={() => setKonfirmasi(true)}
+      siapKirim={siapKirim}
+    />
+  );
 
   return (
     <form onSubmit={handleSubmit} className="max-w-5xl mx-auto bg-white px-6 md:px-12 py-8 md:py-10 space-y-4">
@@ -1130,16 +1191,20 @@ function Apl01Form({ payload, setPayload }: { payload: Apl01Payload; setPayload:
             </span>
           )}
         </div>
-        <EditSaveControls
-          bisaUbah={bisaUbah}
-          isEditing={isEditing}
-          savedSuccess={savedSuccess}
-          menyimpan={menyimpan}
-          onUbah={handleUbah}
-          onKirim={() => setKonfirmasi(true)}
-          siapKirim={siapKirim}
-        />
+        {kontrol}
       </div>
+
+      <KoreksiInfo meta={meta} isEditing={isEditing} />
+      {bisaKoreksi && <AlasanKoreksiDialog k={koreksi} nama="FR.APL.01" />}
+      {bisaUbah && !isEditing && !dirty && (
+        <KekuranganKirim
+          kekurangan={meta.kekurangan}
+          label={(k) => LABEL_KEKURANGAN[k]}
+          cari={(k) =>
+            k === "tanda_tangan" ? null : document.querySelector(`[name="${k.replace(/^isian./, "")}"], [aria-label="${LABEL_KEKURANGAN[k] ?? ""}"]`)
+          }
+        />
+      )}
 
       <div className="space-y-10">
         <SectionRincian {...sectionProps} opsiJenisKelamin={payload.opsi.jenis_kelamin} />
@@ -1149,7 +1214,7 @@ function Apl01Form({ payload, setPayload }: { payload: Apl01Payload; setPayload:
         <SectionBuktiKelengkapan
           payload={payload}
           isian={isian}
-          isEditing={isEditing && bisaUbah}
+          isEditing={isEditing && bisaIsi}
           errors={errors}
           bisaUbah={bisaUbah}
           buktiProses={buktiProses}
@@ -1163,15 +1228,7 @@ function Apl01Form({ payload, setPayload }: { payload: Apl01Payload; setPayload:
       </div>
 
       <div className="flex justify-end pt-4">
-        <EditSaveControls
-          bisaUbah={bisaUbah}
-          isEditing={isEditing}
-          savedSuccess={savedSuccess}
-          menyimpan={menyimpan}
-          onUbah={handleUbah}
-          onKirim={() => setKonfirmasi(true)}
-          siapKirim={siapKirim}
-        />
+        {kontrol}
       </div>
 
       <SignatureDialog

@@ -20,6 +20,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (role: MukRole, credentials: LoginCredentials) => Promise<User>;
+  loginAdmin: (kode: string) => Promise<number>;
   logout: () => Promise<void>;
 }
 
@@ -121,6 +122,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [scheduleExpiry],
   );
 
+  /** Admin LSP dari CMS: kode sekali pakai -> sesi baca-saja. Mengembalikan id penilaian tujuan. */
+  const loginAdmin = useCallback(
+    async (kode: string) => {
+      const { token, user: masuk, expires_at, penilaian_id } = await mukAuth.tukarAdmin(kode);
+      clearDataCache();
+      setStoredAuth(token, masuk, expires_at);
+      setUser(masuk);
+      scheduleExpiry(expires_at);
+      return penilaian_id;
+    },
+    [scheduleExpiry],
+  );
+
   const logout = useCallback(async () => {
     try {
       await mukAuth.logout();
@@ -136,6 +150,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isAuthenticated: !!user,
     isLoading,
     login,
+    loginAdmin,
     logout,
   };
 
