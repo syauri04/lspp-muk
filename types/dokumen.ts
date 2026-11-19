@@ -36,7 +36,10 @@ export interface DokumenMeta {
   tanda_tangan: Record<PihakTtd, { ada: boolean; tanggal: string | null }>;
   hasil_rekomendasi_admin: "diterima" | "ditolak" | null;
   catatan_admin: string | null;
-  hasil_rekomendasi_asesor: "dapat_dilanjutkan" | "tidak_dapat_dilanjutkan" | null;
+  hasil_rekomendasi_asesor:
+    | "dapat_dilanjutkan"
+    | "tidak_dapat_dilanjutkan"
+    | null;
   catatan_asesor: string | null;
 }
 
@@ -100,7 +103,11 @@ export interface Apl01BuktiRelevan {
   nama: string;
   template: boolean;
   link: string | null;
-  file: { nama: string | null; mime: string | null; ukuran_kb: number | null } | null;
+  file: {
+    nama: string | null;
+    mime: string | null;
+    ukuran_kb: number | null;
+  } | null;
 }
 
 export interface Apl01Payload extends DokumenPayload {
@@ -162,7 +169,12 @@ export interface Apl02Unit {
 }
 
 export interface Apl02Payload extends DokumenPayload {
-  skema: { id: number; judul: string | null; nomor: string | null; jenis: string | null };
+  skema: {
+    id: number;
+    judul: string | null;
+    nomor: string | null;
+    jenis: string | null;
+  };
   unit_kompetensi: Apl02Unit[];
   progres: { terisi: number; total: number };
   asesi: { nama: string | null };
@@ -182,7 +194,11 @@ export interface Apl02Patch {
   jawaban: {
     elemen_id: number;
     kompeten: Kompeten | null;
-    bukti: { id: number | null; link: string | null; lampiran_id: number | null }[];
+    bukti: {
+      id: number | null;
+      link: string | null;
+      lampiran_id: number | null;
+    }[];
   }[];
 }
 
@@ -220,9 +236,21 @@ export interface AdaCatatan {
   catatan: string | null;
 }
 
-export type Mapa01Grup = "asesi" | "tujuan" | "lingkungan" | "peluang" | "siapa" | "konfirmasi" | "standar";
+export type Mapa01Grup =
+  | "asesi"
+  | "tujuan"
+  | "lingkungan"
+  | "peluang"
+  | "siapa"
+  | "konfirmasi"
+  | "standar";
 export type Mapa01Hubungan = "bukti" | "aktivitas" | "pembelajaran";
-export type Mapa01Modifikasi = "karakteristik" | "kontekstualisasi" | "saran" | "penyesuaian" | "peluang_terintegrasi";
+export type Mapa01Modifikasi =
+  | "karakteristik"
+  | "kontekstualisasi"
+  | "saran"
+  | "penyesuaian"
+  | "peluang_terintegrasi";
 
 export type Mapa01Isian = Record<Mapa01Grup, string[]> & {
   hubungan: Record<Mapa01Hubungan, { checked: boolean; emoji: Emoji | null }>;
@@ -299,6 +327,12 @@ interface AkPayloadDasar<I> extends DokumenPayload {
   opsi_tuk: Opsi[];
 }
 
+export interface Ak04Isian {
+  jawaban: { hasil: Pencapaian }[];
+  alasan_banding: string | null;
+}
+export type Ak04Payload = AkPayloadDasar<Ak04Isian>;
+
 export interface Ak07Karakter {
   penyesuaian: "ya" | "tidak" | null;
   /** Indeks opsi keterangan yang dicentang. */
@@ -312,7 +346,11 @@ export interface Ak07Isian {
   tanggal: string | null;
   potensi: string[];
   karakter: Record<string, Ak07Karakter>;
-  hasil: { acuan: string | null; metode: string | null; instrumen: string | null };
+  hasil: {
+    acuan: string | null;
+    metode: string | null;
+    instrumen: string | null;
+  };
 }
 
 export interface Ak07Payload extends AkPayloadDasar<Ak07Isian> {
@@ -325,7 +363,11 @@ export interface Ak01Isian {
   tuk: JenisTuk | null;
   bukti: string[];
   bukti_lainnya: string | null;
-  pelaksanaan: { tanggal: string | null; waktu: string | null; tuk: string | null };
+  pelaksanaan: {
+    tanggal: string | null;
+    waktu: string | null;
+    tuk: string | null;
+  };
 }
 
 export interface Ak01Payload extends AkPayloadDasar<Ak01Isian> {
@@ -347,14 +389,27 @@ export interface Ia01Elemen {
 export interface Ia01Isian {
   tuk: JenisTuk | null;
   tanggal: string | null;
-  elemen: Record<string, { standar: string | null; pencapaian: Pencapaian; lanjut: string | null }>;
+  elemen: Record<
+    string,
+    { standar: string | null; pencapaian: Pencapaian; lanjut: string | null }
+  >;
   umpan_balik: string | null;
   rekomendasi: "kompeten" | "lanjutan" | null;
-  lanjutan: { kelompok: string | null; unit: string | null; elemen: string | null; kuk: string | null };
+  lanjutan: {
+    kelompok: string | null;
+    unit: string | null;
+    elemen: string | null;
+    kuk: string | null;
+  };
 }
 
 export interface Ia01Payload extends AkPayloadDasar<Ia01Isian> {
-  struktur: { id: number; kode_unit: string | null; judul_unit: string; elemen: Ia01Elemen[] }[];
+  struktur: {
+    id: number;
+    kode_unit: string | null;
+    judul_unit: string;
+    elemen: Ia01Elemen[];
+  }[];
 }
 
 export interface Ia02Isian {
@@ -376,7 +431,11 @@ export interface Ia03Isian {
   /** Pertanyaan template (Template TPD; hanya tampil, tidak dikirim balik). */
   pertanyaan: string[];
   jawaban: { tanggapan: string | null; pencapaian: Pencapaian }[];
-  tambahan: { teks: string | null; tanggapan: string | null; pencapaian: Pencapaian }[];
+  tambahan: {
+    teks: string | null;
+    tanggapan: string | null;
+    pencapaian: Pencapaian;
+  }[];
   umpan_balik: string | null;
 }
 
@@ -414,7 +473,8 @@ export interface Ia06bPayload extends DokumenPayload {
 /** FR.IA.06C: asesor menilai jawaban asesi, asesi menyetujui. */
 export interface Ia06cIsian {
   pencapaian: Pencapaian[];
-  umpan_balik: string | null;
+  aspek_pengetahuan: "tercapai" | "belum_tercapai" | null;
+  unit_belum_tercapai: string | null;
 }
 
 export interface Ia06cPayload extends AkPayloadDasar<Ia06cIsian> {
@@ -450,7 +510,11 @@ export interface Ak03Isian {
 }
 
 export interface Ak03Payload extends AkPayloadDasar<Ak03Isian> {
-  header: { tuk: JenisTuk | null; tanggal_mulai: string | null; tanggal_selesai: string | null };
+  header: {
+    tuk: JenisTuk | null;
+    tanggal_mulai: string | null;
+    tanggal_selesai: string | null;
+  };
   komponen: string[];
 }
 
@@ -468,8 +532,18 @@ export interface Ak05Payload extends AkPayloadDasar<Ak05Isian> {
   rekomendasi: Rekomendasi | null;
 }
 
-export type Ak06Aspek = "rencana" | "persiapan" | "implementasi" | "keputusan" | "umpan_balik";
-export type Ak06Dimensi = "task_skills" | "task_management" | "contingency_management" | "job_role_environment" | "transfer_skills";
+export type Ak06Aspek =
+  | "rencana"
+  | "persiapan"
+  | "implementasi"
+  | "keputusan"
+  | "umpan_balik";
+export type Ak06Dimensi =
+  | "task_skills"
+  | "task_management"
+  | "contingency_management"
+  | "job_role_environment"
+  | "transfer_skills";
 
 export interface Ak06Isian {
   tuk: JenisTuk | null;
@@ -497,7 +571,10 @@ export interface Ia08Isian {
   tuk: JenisTuk | null;
   tanggal: string | null;
   /** relevan_id = lampiran bukti relevan FR.APL.01 (berkas dapat dibuka asesor). */
-  portofolio: ({ bukti: string | null; relevan_id?: number | null } & Record<AturanBukti, Pencapaian>)[];
+  portofolio: ({ bukti: string | null; relevan_id?: number | null } & Record<
+    AturanBukti,
+    Pencapaian
+  >)[];
   /** Kunci unit "u{unitId}" yang perlu diklarifikasi saat wawancara (satu centang per unit). */
   klarifikasi: string[];
   /** Materi/substansi wawancara: kunci KUK "k{kukId}" (awal dari Template VP, dapat diubah asesor). */
@@ -510,7 +587,14 @@ export interface Ia08Isian {
 }
 
 export interface Ia08Payload extends AkPayloadDasar<Ia08Isian> {
-  kuk: { kunci: string; unit_kunci: string; unit_no: number; elemen_no: number | string; nomor: string | null; deskripsi: string }[];
+  kuk: {
+    kunci: string;
+    unit_kunci: string;
+    unit_no: number;
+    elemen_no: number | string;
+    nomor: string | null;
+    deskripsi: string;
+  }[];
   /** Lampiran bukti relevan FR.APL.01 yang berisi berkas/link. */
   lampiran: Apl01BuktiRelevan[];
   unit_kompetensi: MapaUnit[];
@@ -524,7 +608,11 @@ export interface Ia09Isian {
   /** Pertanyaan template (hanya tampil, tidak dikirim balik). */
   pertanyaan: string[];
   jawaban: { kesimpulan: string | null; pencapaian: Pencapaian }[];
-  tambahan: { teks: string | null; kesimpulan: string | null; pencapaian: Pencapaian }[];
+  tambahan: {
+    teks: string | null;
+    kesimpulan: string | null;
+    pencapaian: Pencapaian;
+  }[];
 }
 
 export interface Ia09Payload extends AkPayloadDasar<Ia09Isian> {
@@ -535,7 +623,12 @@ export interface Ia09Payload extends AkPayloadDasar<Ia09Isian> {
 export interface Ia10Isian {
   tuk: JenisTuk | null;
   tanggal: string | null;
-  pengawas: { nama: string | null; tempat_kerja: string | null; alamat: string | null; telepon: string | null };
+  pengawas: {
+    nama: string | null;
+    tempat_kerja: string | null;
+    alamat: string | null;
+    telepon: string | null;
+  };
   jawaban: Pencapaian[];
   hubungan: string | null;
   lama_bekerja: string | null;
@@ -583,8 +676,15 @@ export interface Ia04bIsian {
   /** Aspek dari template (hanya tampil, tidak dikirim balik). */
   aspek: Ia04bAspek[];
   /** Kesesuaian awal dari template, dapat diubah asesor. */
-  jawaban: { tanggapan: string | null; pencapaian: Pencapaian; kesesuaian: string | null }[];
-  tambahan: (Ia04bAspek & { tanggapan: string | null; pencapaian: Pencapaian })[];
+  jawaban: {
+    tanggapan: string | null;
+    pencapaian: Pencapaian;
+    kesesuaian: string | null;
+  }[];
+  tambahan: (Ia04bAspek & {
+    tanggapan: string | null;
+    pencapaian: Pencapaian;
+  })[];
   rekomendasi_teks: string | null;
   rekomendasi: "kompeten" | "belum_kompeten" | null;
 }

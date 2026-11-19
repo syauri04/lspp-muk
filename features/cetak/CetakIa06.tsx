@@ -2,9 +2,22 @@
 
 import useSWR from "swr";
 import { mukDokumen, swrKey } from "@/lib/api/muk";
-import type { AkInfo, Ia06aPayload, Ia06bPayload, Ia06cPayload, Ia06Header } from "@/types/dokumen";
+import type {
+  AkInfo,
+  Ia06aPayload,
+  Ia06bPayload,
+  Ia06cPayload,
+  Ia06Header,
+} from "@/types/dokumen";
 import { KepalaAk } from "./CetakAk";
-import { Coret, Kotak, TabelPenyusun, TtdPihak, tgl, tglPanjang } from "./CetakShared";
+import {
+  Coret,
+  Kotak,
+  TabelPenyusun,
+  TtdPihak,
+  tgl,
+  tglPanjang,
+} from "./CetakShared";
 
 /** Kepala FR.IA.06 A/B/C: + Tanggal & Waktu. */
 function KepalaIa06({ info, header }: { info: AkInfo; header: Ia06Header }) {
@@ -29,7 +42,13 @@ function KepalaIa06({ info, header }: { info: AkInfo; header: Ia06Header }) {
   );
 }
 
-function DaftarBernomor({ judul, baris }: { judul?: string; baris: React.ReactNode[] }) {
+function DaftarBernomor({
+  judul,
+  baris,
+}: {
+  judul?: string;
+  baris: React.ReactNode[];
+}) {
   return (
     <table className="tbl">
       <colgroup>
@@ -60,10 +79,14 @@ function DaftarBernomor({ judul, baris }: { judul?: string; baris: React.ReactNo
 export function CetakIa06a({ p }: { p: Ia06aPayload }) {
   const meta = p.dokumen;
   // Penyusun & validator soal esai tersimpan di FR.IA.06B (dokumen asesor); halaman cetak khusus admin dapat membacanya.
-  const { data: kunci } = useSWR(swrKey.dokumen(meta.penilaian_id, "ia-06b"), () => mukDokumen.get<Ia06bPayload>(meta.penilaian_id, "ia-06b"), {
-    revalidateOnFocus: false,
-    shouldRetryOnError: false,
-  });
+  const { data: kunci } = useSWR(
+    swrKey.dokumen(meta.penilaian_id, "ia-06b"),
+    () => mukDokumen.get<Ia06bPayload>(meta.penilaian_id, "ia-06b"),
+    {
+      revalidateOnFocus: false,
+      shouldRetryOnError: false,
+    },
+  );
 
   return (
     <>
@@ -73,11 +96,23 @@ export function CetakIa06a({ p }: { p: Ia06aPayload }) {
       <p className="b" style={{ marginTop: 16 }}>
         Jawablah semua pertanyaan di bawah ini:
       </p>
-      <DaftarBernomor baris={p.pertanyaan.map((t, i) => <div key={i} className="pre">{t}</div>)} />
+      <DaftarBernomor
+        baris={p.pertanyaan.map((t, i) => (
+          <div key={i} className="pre">
+            {t}
+          </div>
+        ))}
+      />
 
       {kunci && (
         <div style={{ marginTop: 18 }}>
-          <TabelPenyusun penilaianId={meta.penilaian_id} slug="ia-06b" penyusun={kunci.penyusun} tanggalBawaan={kunci.dokumen.submitted_at} formatTgl={tglPanjang} />
+          <TabelPenyusun
+            penilaianId={meta.penilaian_id}
+            slug="ia-06b"
+            penyusun={kunci.penyusun}
+            tanggalBawaan={kunci.dokumen.submitted_at}
+            formatTgl={tglPanjang}
+          />
         </div>
       )}
     </>
@@ -90,15 +125,31 @@ export function CetakIa06b({ p }: { p: Ia06bPayload }) {
   const meta = p.dokumen;
   return (
     <>
-      <h1>FR.IA.06.B.&nbsp;&nbsp;&nbsp;LEMBAR KUNCI JAWABAN PERTANYAAN TERTULIS ESAI</h1>
+      <h1>
+        FR.IA.06.B.&nbsp;&nbsp;&nbsp;LEMBAR KUNCI JAWABAN PERTANYAAN TERTULIS
+        ESAI
+      </h1>
       <KepalaIa06 info={p.info} header={p.header} />
 
       <div style={{ marginTop: 16 }}>
-        <DaftarBernomor judul="Jawaban:" baris={p.soal.map((s, i) => <div key={i} className="pre">{s.kunci}</div>)} />
+        <DaftarBernomor
+          judul="Jawaban:"
+          baris={p.soal.map((s, i) => (
+            <div key={i} className="pre">
+              {s.kunci}
+            </div>
+          ))}
+        />
       </div>
 
       <div style={{ marginTop: 18 }}>
-        <TabelPenyusun penilaianId={meta.penilaian_id} slug={meta.slug} penyusun={p.penyusun} tanggalBawaan={meta.submitted_at} formatTgl={tglPanjang} />
+        <TabelPenyusun
+          penilaianId={meta.penilaian_id}
+          slug={meta.slug}
+          penyusun={p.penyusun}
+          tanggalBawaan={meta.submitted_at}
+          formatTgl={tglPanjang}
+        />
       </div>
     </>
   );
@@ -111,8 +162,12 @@ export function CetakIa06c({ p }: { p: Ia06cPayload }) {
   const { info, isian } = p;
   const nilai = isian.pencapaian;
   // (tercapai/ belum tercapai)*: dicoret mengikuti penilaian (semua Ya = tercapai; ada Tidak = belum tercapai).
-  const tercapai = nilai.length && nilai.every((n) => n === "ya") ? 0 : nilai.some((n) => n === "tidak") ? 1 : null;
-
+  const tercapai =
+    isian.aspek_pengetahuan === "tercapai"
+      ? 0
+      : isian.aspek_pengetahuan === "belum_tercapai"
+        ? 1
+        : null;
   return (
     <>
       <h1>FR.IA.06.C.&nbsp;&nbsp;LEMBAR JAWABAN PERTANYAAN TERTULIS ESAI</h1>
@@ -166,10 +221,26 @@ export function CetakIa06c({ p }: { p: Ia06cPayload }) {
             <td style={{ height: 150 }}>Umpan balik untuk asesi</td>
             <td className="c">:</td>
             <td style={{ textAlign: "justify" }}>
-              Aspek pengetahuan seluruh unit kompetensi yang diujikan (<Coret pilihan={["tercapai", " belum tercapai"]} aktif={tercapai} bintang=")*" />
+              Aspek pengetahuan seluruh unit kompetensi yang diujikan (
+              <Coret
+                pilihan={["tercapai", " belum tercapai"]}
+                aktif={tercapai}
+                bintang=")*"
+              />
               <br />
               <br />
-              Tuliskan Unit/Elemen/KUK jika belum tercapai: {isian.umpan_balik ? <span className="pre">{isian.umpan_balik}</span> : "…."}
+              {isian.aspek_pengetahuan === "belum_tercapai" && (
+                <>
+                  <br />
+                  <br />
+                  Tuliskan Unit/Elemen/KUK jika belum tercapai:{" "}
+                  {isian.unit_belum_tercapai ? (
+                    <span className="pre">{isian.unit_belum_tercapai}</span>
+                  ) : (
+                    "…."
+                  )}
+                </>
+              )}
             </td>
           </tr>
           {(["asesi", "asesor"] as const).map((pihak) => (
@@ -181,7 +252,15 @@ export function CetakIa06c({ p }: { p: Ia06cPayload }) {
   );
 }
 
-function FragmenTtd({ pihak, info, meta }: { pihak: "asesi" | "asesor"; info: AkInfo; meta: Ia06cPayload["dokumen"] }) {
+function FragmenTtd({
+  pihak,
+  info,
+  meta,
+}: {
+  pihak: "asesi" | "asesor";
+  info: AkInfo;
+  meta: Ia06cPayload["dokumen"];
+}) {
   return (
     <>
       <tr>
@@ -205,7 +284,12 @@ function FragmenTtd({ pihak, info, meta }: { pihak: "asesi" | "asesor"; info: Ak
         <td className="m">Tanda Tangan/Tanggal</td>
         <td className="c m">:</td>
         <td className="ttd-sel">
-          <TtdPihak penilaianId={meta.penilaian_id} slug={meta.slug} pihak={pihak} ada={meta.tanda_tangan[pihak].ada} />
+          <TtdPihak
+            penilaianId={meta.penilaian_id}
+            slug={meta.slug}
+            pihak={pihak}
+            ada={meta.tanda_tangan[pihak].ada}
+          />
           {tgl(meta.tanda_tangan[pihak].tanggal)}
         </td>
       </tr>
