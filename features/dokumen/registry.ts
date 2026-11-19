@@ -22,6 +22,7 @@ import { Ak02Page } from "@/features/dokumen/ak02/Ak02Page";
 import { Ak03Page } from "@/features/dokumen/ak03/Ak03Page";
 import { Ak05Page } from "@/features/dokumen/ak05/Ak05Page";
 import { Ak06Page } from "@/features/dokumen/ak06/Ak06Page";
+import { Ak04Page } from "@/features/dokumen/ak04/Ak04Page";
 
 /**
  * Props yang diterima setiap halaman dokumen. Penilaian & dokumen sudah dipastikan
@@ -45,11 +46,14 @@ export interface DokumenPageProps {
  * Fase 13: "ia-08", "ia-09", "ia-10" (metode VP).
  * Fase 14: "ia-04a", "ia-04b" (metode KT).
  */
-export const DOKUMEN_REGISTRY: Partial<Record<string, ComponentType<DokumenPageProps>>> = {
+export const DOKUMEN_REGISTRY: Partial<
+  Record<string, ComponentType<DokumenPageProps>>
+> = {
   "apl-01": Apl01Page,
   "apl-02": Apl02Page,
   "mapa-01": Mapa01Page,
   "mapa-02": Mapa02Page,
+  "ak-04": Ak04Page,
   "ak-07": Ak07Page,
   "ak-01": Ak01Page,
   "ia-01": Ia01Page,
